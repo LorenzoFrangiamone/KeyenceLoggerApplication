@@ -1,0 +1,52 @@
+# Generate change Log
+
+## Purpose
+
+Here it will be described how to interpretate and compare report folders in order to generate a precise and ordered change log file.
+
+## How to read datas from report
+
+### Names
+Report folder has name: report<id>
+
+Each element in folder has name: <type>_<applicationID>_<yyyymmdd>.<extension>
+or: unit_<applicationID>_<yyyymmdd>_<unitNumber>.txt
+where: type can be env, unit or variable
+
+### Files
+Each report folder contains:
+#### env_(...).csv
+#### unit_(...).csv
+Where colunmns are: UnitID, Parameter Name, Inspect, Value
+For every unit there are many rows which contains its parameters.
+#### unir_(...).txt
+For every calculation block there is one of this file, it contains the calculation block code.
+#### variable_(...).csv
+In this file columns name are: Name,Type,Quantity,Initialize on reset,Copy current value to initial value at save,Keep initial value when loading program,Recipe Target,Comment,Inspect. There is a row for describing every variable.
+
+## How to generate change log files
+
+### Title is: ChangeLog_<id1>_<id2>
+
+### Content is:
+
+#### Units
+Thake the informations from unit_(...).csv and unit_(...).txt if present.
+##### ADDED+
+List all the units that are present in <id2> report and not on <id1> report
+#### REMOVED-
+List all the units that are present in <id1> report and not on <id2> report
+#### MODIFIED
+List all units whose parameters have been changed, for every unit list which parameters has been changed from which to which value
+
+#### Variables
+Thake the informations from variable_(...).csv.
+##### ADDED+
+List all the variables that are present in <id2> report and not on <id1> report.
+##### REMOVED-
+List all the variables that are present in <id1> report and not on <id2> report.
+##### MODIFIED
+List all variables whose characteristics have been changed, for every variable list which parameters has been changed from which to which value.
+
+#### Interpretation
+Write few lines about the functional difference between the 2 applications.
