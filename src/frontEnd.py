@@ -4,11 +4,12 @@ from tkinter import filedialog, messagebox
 
 
 class CompareApp(tk.Tk):
-    def __init__(self, validate_fn, generate_fn):
+    def __init__(self, validate_fn, generate_fn, preview_fn):
         super().__init__()
 
         self.validate_fn = validate_fn
         self.generate_fn = generate_fn
+        self.preview_fn = preview_fn
 
         # ============================================================
         # STILE UI
@@ -153,6 +154,9 @@ class CompareApp(tk.Tk):
     def _build_page2(self):
         self.page2 = tk.Frame(self, bg=self.BG)
 
+        # =========================
+        # CARD ROOT
+        # =========================
         card = tk.Frame(
             self.page2,
             bg=self.CARD,
@@ -163,12 +167,15 @@ class CompareApp(tk.Tk):
         )
         card.pack(fill="both", expand=True, padx=18, pady=18)
 
+        # =========================
+        # HEADER
+        # =========================
         header = tk.Frame(card, bg=self.CARD)
         header.pack(fill="x", padx=20, pady=(18, 12))
 
         tk.Label(
             header,
-            text="Comments",
+            text="Preview & Comments",
             bg=self.CARD,
             fg=self.TEXT,
             font=self.FONT_TITLE
@@ -176,23 +183,90 @@ class CompareApp(tk.Tk):
 
         tk.Label(
             header,
-            text="Inserisci un commento opzionale da scrivere nella sezione finale del changelog.",
+            text="Controlla le differenze e inserisci un commento finale.",
             bg=self.CARD,
             fg=self.MUTED,
             font=self.FONT_NORMAL
         ).pack(anchor="w", pady=(4, 0))
 
+        # =========================
+        # MAIN CONTENT AREA
+        # =========================
+        main_container = tk.Frame(card, bg=self.CARD)
+        main_container.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+
+        main_container.pack_propagate(False)
+        main_container.configure(height=340)
+
+        # crea 2 colonne
+        left_frame = tk.Frame(main_container, bg=self.CARD)
+        left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        right_frame = tk.Frame(main_container, bg=self.CARD)
+        right_frame.pack(side="right", fill="both", expand=True)
+
+        # =========================
+        # PREVIEW (LEFT)
+        # =========================
+        tk.Label(
+            left_frame,
+            text="Preview Differences",
+            bg=self.CARD,
+            fg=self.TEXT,
+            font=self.FONT_LABEL
+        ).pack(anchor="w")
+
+        preview_container = tk.Frame(left_frame)
+        preview_container.pack(fill="both", expand=True)
+
+        # scrollbar preview
+        preview_scroll = tk.Scrollbar(preview_container)
+        preview_scroll.pack(side="right", fill="y")
+
+        self.preview_box = tk.Text(
+            preview_container,
+            font=self.FONT_COMMENT,
+            wrap="word",
+            relief="solid",
+            bd=1,
+            yscrollcommand=preview_scroll.set
+        )
+        self.preview_box.pack(side="left", fill="both", expand=True)
+
+        preview_scroll.config(command=self.preview_box.yview)
+
+        # =========================
+        # COMMENT (RIGHT)
+        # =========================
+        tk.Label(
+            right_frame,
+            text="Comment",
+            bg=self.CARD,
+            fg=self.TEXT,
+            font=self.FONT_LABEL
+        ).pack(anchor="w")
+
+        comment_container = tk.Frame(right_frame)
+        comment_container.pack(fill="both", expand=True)
+
+        comment_scroll = tk.Scrollbar(comment_container)
+        comment_scroll.pack(side="right", fill="y")
+
         self.comment_box = tk.Text(
-            card,
-            height=18,
-            width=96,
+            comment_container,
             font=self.FONT_COMMENT,
             relief="solid",
             bd=1,
-            wrap="word"
+            wrap="word",
+            yscrollcommand=comment_scroll.set
         )
-        self.comment_box.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        self.comment_box.pack(side="left", fill="both", expand=True)
 
+        comment_scroll.config(command=self.comment_box.yview)
+
+        # =========================
+        # BUTTONS (SEMPRE VISIBILI)
+        # =========================
         btn_frame = tk.Frame(card, bg=self.CARD)
         btn_frame.pack(fill="x", padx=20, pady=(0, 18))
 
@@ -272,6 +346,27 @@ class CompareApp(tk.Tk):
         self.next_button.config(state="normal")
         return True
 
+    # def next_page(self):
+    #     if not self.validate_current_inputs():
+    #         return
+
+    #     report_a = self.report_a_var.get().strip()
+    #     report_b = self.report_b_var.get().strip()
+
+    #     self.page1.pack_forget()
+    #     self.page2.pack(fill="both", expand=True)
+
+    #     try:
+    #         preview_text = self.preview_fn(report_a, report_b)
+
+    #         self.preview_box.delete("1.0", "end")
+    #         self.preview_box.insert("1.0", preview_text)
+
+    #         self.apply_preview_formatting()
+
+    #     except Exception as e:
+    #         messagebox.showerror("Errore preview", str(e))
+
     def next_page(self):
         if not self.validate_current_inputs():
             return
@@ -279,20 +374,27 @@ class CompareApp(tk.Tk):
         report_a = self.report_a_var.get().strip()
         report_b = self.report_b_var.get().strip()
 
-        ok_a, err_a, warn_a = self.validate_fn(report_a)
-        ok_b, err_b, warn_b = self.validate_fn(report_b)
-
-        warn_msgs = []
-        if warn_a:
-            warn_msgs.append("Report A: " + "; ".join(warn_a))
-        if warn_b:
-            warn_msgs.append("Report B: " + "; ".join(warn_b))
-
         self.page1.pack_forget()
         self.page2.pack(fill="both", expand=True)
 
-        if warn_msgs:
-            messagebox.showwarning("Warning", "\n".join(warn_msgs))
+        try:
+            preview_text = self.preview_fn(report_a, report_b)
+
+            # ✅ abilita scrittura temporanea
+            self.preview_box.config(state="normal")
+
+            # ✅ scrive contenuto
+            self.preview_box.delete("1.0", "end")
+            self.preview_box.insert("1.0", preview_text)
+
+            # ✅ applica colori
+            self.apply_preview_formatting()
+
+            # ✅ blocca editing (STEP 4)
+            self.preview_box.config(state="disabled")
+
+        except Exception as e:
+            messagebox.showerror("Errore preview", str(e))
 
     def back_page(self):
         self.page2.pack_forget()
@@ -312,3 +414,33 @@ class CompareApp(tk.Tk):
             messagebox.showinfo("Completato", f"Change log creato con successo:\n\n{output_file}")
         except Exception as e:
             messagebox.showerror("Errore", f"Errore durante la generazione:\n\n{e}")
+
+    def apply_preview_formatting(self):
+        text = self.preview_box.get("1.0", "end")
+
+        # reset tag
+        self.preview_box.tag_delete("added")
+        self.preview_box.tag_delete("removed")
+        self.preview_box.tag_delete("modified")
+        self.preview_box.tag_delete("title")
+
+        # crea tag colori
+        self.preview_box.tag_config("added", foreground="green")
+        self.preview_box.tag_config("removed", foreground="red")
+        self.preview_box.tag_config("modified", foreground="orange")
+        self.preview_box.tag_config("title", foreground="blue", font=("Consolas", 10, "bold"))
+
+        lines = text.split("\n")
+
+        for i, line in enumerate(lines):
+            index_start = f"{i+1}.0"
+            index_end = f"{i+1}.end"
+
+            if "ADDED+" in line:
+                self.preview_box.tag_add("added", index_start, index_end)
+            elif "REMOVED-" in line:
+                self.preview_box.tag_add("removed", index_start, index_end)
+            elif "MODIFIED" in line:
+                self.preview_box.tag_add("modified", index_start, index_end)
+            elif line.startswith("##"):
+                self.preview_box.tag_add("title", index_start, index_end)

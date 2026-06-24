@@ -99,6 +99,12 @@ def parse_unit_csv(path):
         if not uid:
             continue
 
+        if row[0] == row[1]:
+            unit_name = row[2] if len(row) > 2 else ""
+        
+        if unit_name:
+            result["units"][uid]["__NAME__"] = unit_name
+     
         key = param if param else "__UNIT__"
 
         result["units"][uid][key] = {
@@ -194,8 +200,17 @@ def compare_units(units_a, units_b):
     unit_ids_a = set(units_a.keys())
     unit_ids_b = set(units_b.keys())
 
-    out["added_units"] = sorted(unit_ids_b - unit_ids_a)
-    out["removed_units"] = sorted(unit_ids_a - unit_ids_b)
+    
+    out["added_units"] = [
+        (uid, units_b[uid].get("__NAME__", ""))
+        for uid in sorted(unit_ids_b - unit_ids_a)
+    ]
+
+    out["removed_units"] = [
+        (uid, units_a[uid].get("__NAME__", ""))
+        for uid in sorted(unit_ids_a - unit_ids_b)
+    ]
+
 
     for unit_id in sorted(unit_ids_a & unit_ids_b):
         params_a = units_a[unit_id]
@@ -210,7 +225,7 @@ def compare_units(units_a, units_b):
             "modified_params": []
         }
 
-        for p in sorted(keys_a & keys_b):
+        for p in sorted(k for k in (keys_a & keys_b) if k != "__NAME__"):
             a = params_a[p]
             b = params_b[p]
 
@@ -228,7 +243,8 @@ def compare_units(units_a, units_b):
             or unit_changes["removed_params"]
             or unit_changes["modified_params"]
         ):
-            out["modified_units"].append((unit_id, unit_changes))
+            unit_name = params_a.get("__NAME__", "") or params_b.get("__NAME__", "")
+            out["modified_units"].append((unit_id, unit_name, unit_changes))
 
     return out
 
@@ -339,34 +355,58 @@ def render_units_changes(unit_cmp, title_a="", title_b=""):
     if unit_cmp["added_units"]:
         lines.append("### ADDED+")
         for unit_id in unit_cmp["added_units"]:
-            lines.append(f"- `{unit_id}`")
+            unit_name = ""
+            unit_data = unit_cmp.get(unit_id, {})
+
+            if "__NAME__" in unit_data:
+                unit_name = unit_data["__NAME__"]
+
+            label = f"{unit_id}"
+            if unit_name:
+                label += f" {unit_name}"
+
+            lines.append(f"- {label}")
 
     if unit_cmp["removed_units"]:
         lines.append("")
         lines.append("### REMOVED-")
         for unit_id in unit_cmp["removed_units"]:
-            lines.append(f"- `{unit_id}`")
+            unit_name = ""
+            unit_data = unit_cmp.get(unit_id, {})
+
+            if "__NAME__" in unit_data:
+                unit_name = unit_data["__NAME__"]
+
+            label = f"{unit_id}"
+            if unit_name:
+                label += f" ({unit_name})"
+
+            lines.append(f"- {label}")
 
     if unit_cmp["modified_units"]:
         lines.append("")
         lines.append("### MODIFIED")
-        for unit_id, ch in unit_cmp["modified_units"]:
-            lines.append(f"- `{unit_id}`")
+        for unit_id, unit_name, ch in unit_cmp["modified_units"]:
+            label = f"{unit_id}"
+            if unit_name:
+                label += f" ({unit_name})"
+
+            lines.append(f"- {label}")
 
             if ch["added_params"]:
                 lines.append("  - added params:")
                 for p in ch["added_params"]:
-                    lines.append(f"    - `{p}`")
+                    lines.append(f"    - {p}")
 
             if ch["removed_params"]:
                 lines.append("  - removed params:")
                 for p in ch["removed_params"]:
-                    lines.append(f"    - `{p}`")
+                    lines.append(f"    - {p}")
 
             if ch["modified_params"]:
                 lines.append("  - modified params:")
                 for p, field_changes in ch["modified_params"]:
-                    lines.append(f"    - `{p}`")
+                    lines.append(f"    - {p}")
                     for field, (old, new) in field_changes.items():
                         lines.append(f'      - {field}: "{old}" -> "{new}"')
 
@@ -381,19 +421,19 @@ def render_variables_changes(var_cmp):
     if var_cmp["added"]:
         lines.append("### ADDED+")
         for name in var_cmp["added"]:
-            lines.append(f"- `{name}`")
+            lines.append(f"- {name}")
 
     if var_cmp["removed"]:
         lines.append("")
         lines.append("### REMOVED-")
         for name in var_cmp["removed"]:
-            lines.append(f"- `{name}`")
+            lines.append(f"- {name}")
 
     if var_cmp["modified"]:
         lines.append("")
         lines.append("### MODIFIED")
         for name, changes in var_cmp["modified"]:
-            lines.append(f"- `{name}`")
+            lines.append(f"- {name}")
             for col, (old, new) in changes.items():
                 lines.append(f'  - {col}: "{old}" -> "{new}"')
 
@@ -408,13 +448,13 @@ def render_logic_changes(txt_cmp):
     if txt_cmp["added"]:
         lines.append("### ADDED+")
         for block_id in txt_cmp["added"]:
-            lines.append(f"- `{block_id}`")
+            lines.append(f"- {block_id}")
 
     if txt_cmp["removed"]:
         lines.append("")
         lines.append("### REMOVED-")
         for block_id in txt_cmp["removed"]:
-            lines.append(f"- `{block_id}`")
+            lines.append(f"- {block_id}")
 
     if txt_cmp["modified"]:
         lines.append("")
@@ -425,9 +465,9 @@ def render_logic_changes(txt_cmp):
             new_file = item["new_file_name"]
             diffs = item["diffs"]
 
-            lines.append(f"- `{block_id}`")
-            lines.append(f"  - old file: `{old_file}`")
-            lines.append(f"  - new file: `{new_file}`")
+            lines.append(f"- {block_id}")
+            lines.append(f"  - old file: {old_file}")
+            lines.append(f"  - new file: {new_file}")
 
             if not diffs:
                 lines.append("  - content changed, but no line-level diff detected")
@@ -496,6 +536,7 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
     parts.append("")
     parts.append(render_units_changes(
         unit_cmp,
+        report_a["unit_csv"]["units"],
         title_a=report_a["unit_csv"].get("title", ""),
         title_b=report_b["unit_csv"].get("title", "")
     ))
@@ -515,3 +556,36 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
         f.write(final_text)
 
     return output_file
+
+def build_preview(report_a_path, report_b_path):
+    report_a = load_report(report_a_path)
+    report_b = load_report(report_b_path)
+
+    unit_cmp = compare_units(
+        report_a["unit_csv"]["units"],
+        report_b["unit_csv"]["units"]
+    )
+
+    var_cmp = compare_variables(
+        report_a["variables"],
+        report_b["variables"]
+    )
+
+    txt_cmp = compare_unit_txt(
+        report_a["unit_txt"],
+        report_b["unit_txt"]
+    )
+
+    parts = []
+
+    parts.append(render_units_changes(
+        unit_cmp,
+        report_a["unit_csv"].get("title", ""),
+        report_b["unit_csv"].get("title", "")
+    ))
+    parts.append("\n")
+    parts.append(render_variables_changes(var_cmp))
+    parts.append("\n")
+    parts.append(render_logic_changes(txt_cmp))
+
+    return "\n".join(parts)
