@@ -19,8 +19,8 @@ Restituisci esclusivamente il risultato finale.
 //Correzione:
 In questa sezione restituisci solo il testo //HUMAN corretto secondo i criteri sotto:
 - Correggi grammatica e ortografia.
-- Mantieni il significato.
-- Quando viene citata una unit sostituisci con riformattazione come esempio: (//AUTO )
+- Mantieni il significato non aggiungere nulla in questa sezione
+- Quando viene citata una unit sostituisci con riformattazione come esempio nel blocco human: (//AUTO U0006 Calculation, //HUMAN u6, -> //Correzione: U0006 Calculation)
 
 //Suggerimento:
 In questa sezione restituisci solo domande secondo le linee guida sotto:
@@ -31,7 +31,7 @@ In questa sezione restituisci solo domande secondo le linee guida sotto:
 def AICorrection(auto, human):
 
     risposta = chat(
-        model="qwen3:8b",
+        model="qwen3:1.7b",
         messages=[
             {
                 "role": "system",

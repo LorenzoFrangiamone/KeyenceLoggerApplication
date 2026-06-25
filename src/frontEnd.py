@@ -1,7 +1,10 @@
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-
+from tkinterweb import HtmlFrame
+import markdown
+import threading
+from src.AICorrector import AICorrection
 
 class CompareApp(tk.Tk):
     def __init__(self, validate_fn, generate_fn, preview_fn):
@@ -151,6 +154,7 @@ class CompareApp(tk.Tk):
     # ============================================================
     # PAGE 2
     # ============================================================
+    
     def _build_page2(self):
         self.page2 = tk.Frame(self, bg=self.BG)
 
@@ -167,11 +171,18 @@ class CompareApp(tk.Tk):
         )
         card.pack(fill="both", expand=True, padx=18, pady=18)
 
+        # layout del card:
+        # riga 0 = header
+        # riga 1 = main area espandibile
+        # riga 2 = bottoni sempre visibili
+        card.grid_rowconfigure(1, weight=1)
+        card.grid_columnconfigure(0, weight=1)
+
         # =========================
         # HEADER
         # =========================
         header = tk.Frame(card, bg=self.CARD)
-        header.pack(fill="x", padx=20, pady=(18, 12))
+        header.grid(row=0, column=0, sticky="ew", padx=20, pady=(18, 12))
 
         tk.Label(
             header,
@@ -193,33 +204,36 @@ class CompareApp(tk.Tk):
         # MAIN CONTENT AREA
         # =========================
         main_container = tk.Frame(card, bg=self.CARD)
-        main_container.pack(fill="both", expand=True, padx=20, pady=(0, 12))
+        main_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 12))
 
-        main_container.pack_propagate(False)
-        main_container.configure(height=340)
+        # se vuoi un'altezza minima, meglio usare minsize
+        card.grid_rowconfigure(1, minsize=340)
 
-        # crea 2 colonne
+        # 2 colonne con stessa larghezza
+        main_container.grid_columnconfigure(0, weight=1, uniform="col")
+        main_container.grid_columnconfigure(1, weight=1, uniform="col")
+        main_container.grid_rowconfigure(0, weight=1)
+
+        # =========================
+        # LEFT COLUMN
+        # =========================
         left_frame = tk.Frame(main_container, bg=self.CARD)
-        left_frame.pack(side="left", fill="both", expand=True, padx=(0, 10))
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
-        right_frame = tk.Frame(main_container, bg=self.CARD)
-        right_frame.pack(side="right", fill="both", expand=True)
+        left_frame.grid_rowconfigure(1, weight=1)
+        left_frame.grid_columnconfigure(0, weight=1)
 
-        # =========================
-        # PREVIEW (LEFT)
-        # =========================
         tk.Label(
             left_frame,
             text="Preview Differences",
             bg=self.CARD,
             fg=self.TEXT,
             font=self.FONT_LABEL
-        ).pack(anchor="w")
+        ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
         preview_container = tk.Frame(left_frame)
-        preview_container.pack(fill="both", expand=True)
+        preview_container.grid(row=1, column=0, sticky="nsew")
 
-        # scrollbar preview
         preview_scroll = tk.Scrollbar(preview_container)
         preview_scroll.pack(side="right", fill="y")
 
@@ -236,18 +250,35 @@ class CompareApp(tk.Tk):
         preview_scroll.config(command=self.preview_box.yview)
 
         # =========================
-        # COMMENT (RIGHT)
+        # RIGHT COLUMN
         # =========================
+        right_frame = tk.Frame(main_container, bg=self.CARD)
+        right_frame.grid(row=0, column=1, sticky="nsew")
+
+        # due righe uguali = metà altezza sopra e metà sotto
+        right_frame.grid_columnconfigure(0, weight=1)
+        right_frame.grid_rowconfigure(0, weight=1, uniform="right_rows")
+        right_frame.grid_rowconfigure(1, weight=1, uniform="right_rows")
+
+        # -------------------------
+        # TOP RIGHT: COMMENT
+        # -------------------------
+        top_right = tk.Frame(right_frame, bg=self.CARD)
+        top_right.grid(row=0, column=0, sticky="nsew", pady=(0, 8))
+
+        top_right.grid_columnconfigure(0, weight=1)
+        top_right.grid_rowconfigure(1, weight=1)
+
         tk.Label(
-            right_frame,
+            top_right,
             text="Comment",
             bg=self.CARD,
             fg=self.TEXT,
             font=self.FONT_LABEL
-        ).pack(anchor="w")
+        ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        comment_container = tk.Frame(right_frame)
-        comment_container.pack(fill="both", expand=True)
+        comment_container = tk.Frame(top_right)
+        comment_container.grid(row=1, column=0, sticky="nsew")
 
         comment_scroll = tk.Scrollbar(comment_container)
         comment_scroll.pack(side="right", fill="y")
@@ -264,11 +295,77 @@ class CompareApp(tk.Tk):
 
         comment_scroll.config(command=self.comment_box.yview)
 
+        # -------------------------
+        # BOTTOM RIGHT: AI HELPER
+        # -------------------------
+        AI_helper = tk.Frame(right_frame, bg=self.CARD)
+        AI_helper.grid(row=1, column=0, sticky="nsew")
+
+        AI_helper.grid_columnconfigure(0, weight=1)
+        AI_helper.grid_rowconfigure(1, weight=1)
+
+        # Header della sezione AI con titolo a sinistra e bottoni a destra
+        ai_header = tk.Frame(AI_helper, bg=self.CARD)
+        ai_header.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        ai_header.grid_columnconfigure(0, weight=1)
+
+        tk.Label(
+            ai_header,
+            text="AI Correct & Suggest",
+            bg=self.CARD,
+            fg=self.TEXT,
+            font=self.FONT_LABEL
+        ).grid(row=0, column=0, sticky="w")
+
+        ai_btns = tk.Frame(ai_header, bg=self.CARD)
+        ai_btns.grid(row=0, column=1, sticky="e")
+        
+        self.correct_btn = tk.Button(
+            ai_btns,
+            text="Correct",
+            command=self.on_correct,
+            width=10,
+            bg="#e9eef5",
+            font=self.FONT_BUTTON,
+            relief="flat"
+        )
+        self.correct_btn.pack(side="left", padx=(0, 6))
+
+        self.accept_btn = tk.Button(
+            ai_btns,
+            text="Accept Correction",
+            command=self.on_accept_correction,
+            width=16,
+            bg=self.ACCENT2,
+            fg=self.TEXT,
+            font=self.FONT_BUTTON,
+            relief="flat"
+        )
+        self.accept_btn.pack(side="left")
+
+        notes_container = tk.Frame(AI_helper)
+        notes_container.grid(row=1, column=0, sticky="nsew")
+
+        notes_scroll = tk.Scrollbar(notes_container)
+        notes_scroll.pack(side="right", fill="y")
+
+        self.notes_box = tk.Text(
+            notes_container,
+            font=self.FONT_COMMENT,
+            relief="solid",
+            bd=1,
+            wrap="word",
+            yscrollcommand=notes_scroll.set
+        )
+        self.notes_box.pack(side="left", fill="both", expand=True)
+
+        notes_scroll.config(command=self.notes_box.yview)
+
         # =========================
         # BUTTONS (SEMPRE VISIBILI)
         # =========================
         btn_frame = tk.Frame(card, bg=self.CARD)
-        btn_frame.pack(fill="x", padx=20, pady=(0, 18))
+        btn_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 18))
 
         tk.Button(
             btn_frame,
@@ -292,7 +389,6 @@ class CompareApp(tk.Tk):
             font=self.FONT_BUTTON,
             relief="flat"
         ).pack(side="right")
-
     # ============================================================
     # CALLBACKS
     # ============================================================
@@ -423,3 +519,90 @@ class CompareApp(tk.Tk):
                 self.preview_box.tag_add("modified", index_start, index_end)
             elif line.startswith("##"):
                 self.preview_box.tag_add("title", index_start, index_end)
+
+    def on_correct(self):
+        human = self.comment_box.get("1.0", "end").strip()
+        auto = self.preview_box.get("1.0", "end").strip()
+
+        # opzionale: validazione minima
+        if not human and not auto:
+            messagebox.showwarning(
+                "Missing content",
+                "Non ci sono contenuti da inviare alla correzione AI."
+            )
+            return
+
+        # disattiva bottone Correct
+        self.correct_btn.config(state="disabled")
+
+        # mostra stato "thinking ..."
+        self.notes_box.config(state="normal")
+        self.notes_box.delete("1.0", "end")
+        self.notes_box.insert("1.0", "thinking ...")
+        self.notes_box.update_idletasks()
+
+        def worker():
+            try:
+                # chiamata API / funzione AI
+                result = AICorrection(auto, human)
+
+                # se la risposta non è stringa, la converto
+                if result is None:
+                    result = ""
+                else:
+                    result = str(result)
+
+                self.after(0, lambda: self._on_correct_success(result))
+
+            except Exception as e:
+                self.after(0, lambda: self._on_correct_error(e))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_correct_success(self, result):
+        self.notes_box.config(state="normal")
+        self.notes_box.delete("1.0", "end")
+        self.notes_box.insert("1.0", result)
+        self.correct_btn.config(state="normal")
+
+    def _on_correct_error(self, error):
+        self.notes_box.config(state="normal")
+        self.notes_box.delete("1.0", "end")
+        self.notes_box.insert("1.0", f"Errore durante la correzione AI:\n{error}")
+        self.correct_btn.config(state="normal")
+
+    def on_accept_correction(self):
+        """
+        Copia nel riquadro Comment solo la parte del testo AI
+        che precede il marker '//Suggerimento:' (marker escluso).
+        Se il marker non esiste, copia tutto il contenuto.
+        """
+
+        ai_text = self.notes_box.get("1.0", "end").strip()
+
+        if not ai_text:
+            return
+
+        if ai_text.lower() == "thinking ...":
+            return
+        
+        # Divide il testo in righe
+        lines = ai_text.splitlines()
+
+        # Prende il testo dalla seconda riga in poi
+        if len(lines) < 2:
+            return
+        
+        text_from_second_line = "\n".join(lines[1:]).strip()
+
+        if not text_from_second_line:
+            return
+
+        marker = "//Suggerimento:"
+        accepted_text = text_from_second_line.split(marker, 1)[0].rstrip()
+
+        if not accepted_text:
+            return
+
+        self.comment_box.delete("1.0", "end")
+        self.comment_box.insert("1.0", accepted_text)

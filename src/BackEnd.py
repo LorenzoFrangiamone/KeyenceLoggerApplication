@@ -148,7 +148,6 @@ def find_txt_unit_name(unitId, folder):
     
     return "name not found"
 
-
 def extract_logic_block_id(filename):
     """
     Esempi:

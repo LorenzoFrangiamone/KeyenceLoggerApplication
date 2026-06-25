@@ -1,6 +1,5 @@
 from src.frontEnd import CompareApp
 from src.backEnd import validate_report_folder, generate_changelog, build_preview
-from src.AICorrector import AICorrection
 
 def main():
     app = CompareApp(
