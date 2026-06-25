@@ -154,7 +154,6 @@ class CompareApp(tk.Tk):
     # ============================================================
     # PAGE 2
     # ============================================================
-    
     def _build_page2(self):
         self.page2 = tk.Frame(self, bg=self.BG)
 
@@ -171,12 +170,10 @@ class CompareApp(tk.Tk):
         )
         card.pack(fill="both", expand=True, padx=18, pady=18)
 
-        # layout del card:
-        # riga 0 = header
-        # riga 1 = main area espandibile
-        # riga 2 = bottoni sempre visibili
+        # Layout
         card.grid_rowconfigure(1, weight=1)
         card.grid_columnconfigure(0, weight=1)
+        card.grid_rowconfigure(1, minsize=340)
 
         # =========================
         # HEADER
@@ -206,10 +203,6 @@ class CompareApp(tk.Tk):
         main_container = tk.Frame(card, bg=self.CARD)
         main_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 12))
 
-        # se vuoi un'altezza minima, meglio usare minsize
-        card.grid_rowconfigure(1, minsize=340)
-
-        # 2 colonne con stessa larghezza
         main_container.grid_columnconfigure(0, weight=1, uniform="col")
         main_container.grid_columnconfigure(1, weight=1, uniform="col")
         main_container.grid_rowconfigure(0, weight=1)
@@ -231,23 +224,20 @@ class CompareApp(tk.Tk):
             font=self.FONT_LABEL
         ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        preview_container = tk.Frame(left_frame)
+        preview_container = tk.Frame(
+            left_frame,
+            bg=self.BORDER,
+            bd=1,
+            relief="solid"
+        )
         preview_container.grid(row=1, column=0, sticky="nsew")
 
-        preview_scroll = tk.Scrollbar(preview_container)
-        preview_scroll.pack(side="right", fill="y")
-
-        self.preview_box = tk.Text(
+        self.preview_box = HtmlFrame(
             preview_container,
-            font=self.FONT_COMMENT,
-            wrap="word",
-            relief="solid",
-            bd=1,
-            yscrollcommand=preview_scroll.set
+            messages_enabled=False,
+            horizontal_scrollbar="auto"
         )
-        self.preview_box.pack(side="left", fill="both", expand=True)
-
-        preview_scroll.config(command=self.preview_box.yview)
+        self.preview_box.pack(fill="both", expand=True, padx=1, pady=1)
 
         # =========================
         # RIGHT COLUMN
@@ -255,7 +245,6 @@ class CompareApp(tk.Tk):
         right_frame = tk.Frame(main_container, bg=self.CARD)
         right_frame.grid(row=0, column=1, sticky="nsew")
 
-        # due righe uguali = metà altezza sopra e metà sotto
         right_frame.grid_columnconfigure(0, weight=1)
         right_frame.grid_rowconfigure(0, weight=1, uniform="right_rows")
         right_frame.grid_rowconfigure(1, weight=1, uniform="right_rows")
@@ -298,14 +287,13 @@ class CompareApp(tk.Tk):
         # -------------------------
         # BOTTOM RIGHT: AI HELPER
         # -------------------------
-        AI_helper = tk.Frame(right_frame, bg=self.CARD)
-        AI_helper.grid(row=1, column=0, sticky="nsew")
+        ai_helper = tk.Frame(right_frame, bg=self.CARD)
+        ai_helper.grid(row=1, column=0, sticky="nsew")
 
-        AI_helper.grid_columnconfigure(0, weight=1)
-        AI_helper.grid_rowconfigure(1, weight=1)
+        ai_helper.grid_columnconfigure(0, weight=1)
+        ai_helper.grid_rowconfigure(1, weight=1)
 
-        # Header della sezione AI con titolo a sinistra e bottoni a destra
-        ai_header = tk.Frame(AI_helper, bg=self.CARD)
+        ai_header = tk.Frame(ai_helper, bg=self.CARD)
         ai_header.grid(row=0, column=0, sticky="ew", pady=(0, 6))
         ai_header.grid_columnconfigure(0, weight=1)
 
@@ -319,7 +307,7 @@ class CompareApp(tk.Tk):
 
         ai_btns = tk.Frame(ai_header, bg=self.CARD)
         ai_btns.grid(row=0, column=1, sticky="e")
-        
+
         self.correct_btn = tk.Button(
             ai_btns,
             text="Correct",
@@ -343,7 +331,7 @@ class CompareApp(tk.Tk):
         )
         self.accept_btn.pack(side="left")
 
-        notes_container = tk.Frame(AI_helper)
+        notes_container = tk.Frame(ai_helper)
         notes_container.grid(row=1, column=0, sticky="nsew")
 
         notes_scroll = tk.Scrollbar(notes_container)
@@ -362,7 +350,7 @@ class CompareApp(tk.Tk):
         notes_scroll.config(command=self.notes_box.yview)
 
         # =========================
-        # BUTTONS (SEMPRE VISIBILI)
+        # BUTTONS
         # =========================
         btn_frame = tk.Frame(card, bg=self.CARD)
         btn_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 18))
@@ -389,6 +377,18 @@ class CompareApp(tk.Tk):
             font=self.FONT_BUTTON,
             relief="flat"
         ).pack(side="right")
+
+        # contenuto iniziale
+        self.set_preview_markdown("""
+    # Preview Differences
+
+    Nessun contenuto disponibile.
+
+    - Carica o genera una preview
+    - Controlla le modifiche
+    - Inserisci il commento finale
+    """)
+
     # ============================================================
     # CALLBACKS
     # ============================================================
@@ -454,19 +454,75 @@ class CompareApp(tk.Tk):
 
         try:
             preview_text = self.preview_fn(report_a, report_b)
+            self.set_preview_markdown(preview_text)
+            
+            html_body = markdown.markdown(
+                preview_text,
+                extensions=["extra", "sane_lists", "nl2br"]
+            )
 
-            # ✅ abilita scrittura temporanea
-            self.preview_box.config(state="normal")
+            html = f"""
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <style>
+                    body {{
+                        font-family: Segoe UI, Arial, sans-serif;
+                        font-size: 11pt;
+                        color: #1f2937;
+                        background: #ffffff;
+                        padding: 14px;
+                        line-height: 1.55;
+                        margin: 0;
+                    }}
+                    h1 {{
+                        font-size: 18pt;
+                        margin: 0 0 10px 0;
+                    }}
+                    h2 {{
+                        font-size: 14pt;
+                        margin: 18px 0 8px 0;
+                    }}
+                    p {{
+                        margin: 8px 0;
+                    }}
+                    ul, ol {{
+                        margin: 8px 0 8px 20px;
+                        padding-left: 18px;
+                    }}
+                    li {{
+                        margin: 4px 0;
+                    }}
+                    code {{
+                        font-family: Consolas, "Courier New", monospace;
+                        background: #f3f4f6;
+                        border-radius: 6px;
+                        padding: 2px 5px;
+                        font-size: 10pt;
+                    }}
+                    pre {{
+                        font-family: Consolas, "Courier New", monospace;
+                        background: #f3f4f6;
+                        border-radius: 8px;
+                        padding: 12px;
+                        white-space: pre-wrap;
+                    }}
+                    blockquote {{
+                        border-left: 4px solid #cbd5e1;
+                        padding-left: 12px;
+                        margin: 10px 0;
+                        color: #475569;
+                        background: #f8fafc;
+                    }}
+                </style>
+            </head>
+            <body>
+                {html_body}
+            </body>
+            </html>
+            """
 
-            # ✅ scrive contenuto
-            self.preview_box.delete("1.0", "end")
-            self.preview_box.insert("1.0", preview_text)
-
-            # ✅ applica colori
-            self.apply_preview_formatting()
-
-            # ✅ blocca editing (STEP 4)
-            self.preview_box.config(state="disabled")
+            self.preview_box.load_html(html)
 
         except Exception as e:
             messagebox.showerror("Errore preview", str(e))
@@ -520,9 +576,157 @@ class CompareApp(tk.Tk):
             elif line.startswith("##"):
                 self.preview_box.tag_add("title", index_start, index_end)
 
+    def set_preview_markdown(self, md_text: str):
+        self.preview_markdown = md_text
+
+        html_body = markdown.markdown(
+            md_text,
+            extensions=["extra", "sane_lists", "nl2br"]
+        )
+
+        html_doc = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    font-family: Segoe UI, Arial, sans-serif;
+                    font-size: 11pt;
+                    color: #1f2937;
+                    background: #ffffff;
+                    padding: 14px;
+                    line-height: 1.55;
+                    margin: 0;
+                }}
+
+                h1 {{
+                    font-size: 18pt;
+                    margin: 0 0 10px 0;
+                    color: #111827;
+                }}
+
+                h2 {{
+                    font-size: 14pt;
+                    margin: 18px 0 8px 0;
+                    color: #111827;
+                }}
+
+                h3 {{
+                    font-size: 12pt;
+                    margin: 14px 0 6px 0;
+                    color: #111827;
+                }}
+
+                p {{
+                    margin: 8px 0;
+                }}
+
+                ul, ol {{
+                    margin: 8px 0 8px 20px;
+                    padding-left: 18px;
+                }}
+
+                li {{
+                    margin: 4px 0;
+                }}
+
+                strong {{
+                    color: #111827;
+                    font-weight: 600;
+                }}
+
+                em {{
+                    color: #374151;
+                    font-style: italic;
+                }}
+
+                code {{
+                    font-family: Consolas, "Courier New", monospace;
+                    background: #f3f4f6;
+                    border-radius: 6px;
+                    padding: 2px 5px;
+                    font-size: 10pt;
+                }}
+
+                pre {{
+                    font-family: Consolas, "Courier New", monospace;
+                    background: #f3f4f6;
+                    border-radius: 8px;
+                    padding: 12px;
+                    white-space: pre-wrap;
+                }}
+
+                blockquote {{
+                    border-left: 4px solid #cbd5e1;
+                    padding-left: 12px;
+                    margin: 10px 0;
+                    color: #475569;
+                    background: #f8fafc;
+                }}
+
+                hr {{
+                    border: none;
+                    border-top: 1px solid #e5e7eb;
+                    margin: 16px 0;
+                }}
+
+                table {{
+                    border-collapse: collapse;
+                    width: 100%;
+                    margin-top: 10px;
+                    margin-bottom: 10px;
+                }}
+
+                th, td {{
+                    border: 1px solid #e5e7eb;
+                    padding: 8px;
+                    text-align: left;
+                }}
+
+                th {{
+                    background: #f9fafb;
+                }}
+            </style>
+        </head>
+        <body>
+            {html_body}
+        </body>
+        </html>
+        """
+
+        self.preview_html = html_doc
+        self.preview_box.load_html(html_doc)
+
+    def set_preview_html(self, html_body: str):
+        html_doc = f"""
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    font-family: Segoe UI, Arial, sans-serif;
+                    font-size: 11pt;
+                    color: #1f2937;
+                    background: #ffffff;
+                    padding: 14px;
+                    line-height: 1.55;
+                    margin: 0;
+                }}
+            </style>
+        </head>
+        <body>
+            {html_body}
+        </body>
+        </html>
+        """
+
+        self.preview_markdown = ""
+        self.preview_html = html_doc
+        self.preview_box.load_html(html_doc)
+
     def on_correct(self):
         human = self.comment_box.get("1.0", "end").strip()
-        auto = self.preview_box.get("1.0", "end").strip()
+        auto = getattr(self, "preview_markdown", "").strip()
 
         # opzionale: validazione minima
         if not human and not auto:

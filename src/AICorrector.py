@@ -29,9 +29,8 @@ In questa sezione restituisci solo domande secondo le linee guida sotto:
 """
 
 def AICorrection(auto, human):
-
     risposta = chat(
-        model="qwen3:1.7b",
+        model="qwen3:1.7b",        
         messages=[
             {
                 "role": "system",
@@ -41,10 +40,18 @@ def AICorrection(auto, human):
                 "role": "user",
                 "content": "//AUTO\n" + auto + "\n//HUMAN\n" + human
             }
-        ]
-    )
+        ],
+        options={ # Servono a limitare la creatività del modello che in questo modo sarà più prevedibile
+                "temperature": 0.1,
+                "top_p": 0.8,
+                "repeat_penalty": 1.1
 
+            }
+
+    )
     return risposta["message"]["content"]
+
+## ------ TEST ------- ##
 
 auto = """
 # ChangeLog__report0000__vs__report0004

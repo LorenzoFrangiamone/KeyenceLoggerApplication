@@ -432,19 +432,19 @@ def render_variables_changes(var_cmp):
     if var_cmp["added"]:
         lines.append("### ADDED+")
         for name in var_cmp["added"]:
-            lines.append(f"- {name}")
+            lines.append(f"- '{name}'")
 
     if var_cmp["removed"]:
         lines.append("")
         lines.append("### REMOVED-")
         for name in var_cmp["removed"]:
-            lines.append(f"- {name}")
+            lines.append(f"- '{name}'")
 
     if var_cmp["modified"]:
         lines.append("")
         lines.append("### MODIFIED")
         for name, changes in var_cmp["modified"]:
-            lines.append(f"- {name}")
+            lines.append(f"- '{name}'")
             for col, (old, new) in changes.items():
                 lines.append(f'  - {col}: "{old}" -> "{new}"')
 
