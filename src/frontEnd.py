@@ -37,7 +37,7 @@ class CompareApp(tk.Tk):
         self.title("Compare Export Agent v3")
         self.geometry("860x520")
         self.configure(bg=self.BG)
-        self.resizable(False, False)
+        self.resizable(True, True)
 
         self.report_a_var = tk.StringVar()
         self.report_b_var = tk.StringVar()
