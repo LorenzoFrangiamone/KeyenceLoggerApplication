@@ -132,17 +132,33 @@ def parse_variable_csv(path):
 
     return data
 
+def find_txt_unit_name(unitId, folder):
+    unit_csv_path = find_first("unit_*.csv", folder)
+    rows = read_csv_rows(unit_csv_path)
+    
+    if not rows:
+        return "unit file is empty"
+
+    first = rows[0] + [""] * (4 - len(rows[0]))
+    start_idx = 1 if (len(first) >= 4 and first[0] == "UnitID") else 0
+
+    for row in rows[start_idx:]:
+        if row[0] == row[1] and row[0] == unitId:
+            return row[2]
+    
+    return "name not found"
+
 
 def extract_logic_block_id(filename):
     """
     Esempi:
-      unit_0000_20260622_102624_MTX0006.txt -> MTX0006
-      unit_0000_20260622_102302_MTX0006.txt -> MTX0006
+      unit_0000_20260622_102624_MTX0006.txt -> U0006
+      unit_0000_20260622_102302_MTX0006.txt -> U0006
     """
     base = os.path.basename(filename)
     m = re.search(r'(MTX[0-9A-Za-z]+)\.txt$', base, re.IGNORECASE)
     if m:
-        return m.group(1).upper()
+        return "U" + m.group(1).upper()[3:]
     return os.path.splitext(base)[0]
 
 
@@ -152,8 +168,9 @@ def parse_unit_txt_files(folder):
     for path in txt_files:
         fname = os.path.basename(path)
         block_id = extract_logic_block_id(fname)
+        name = find_txt_unit_name(block_id, folder)
         result[block_id] = {
-            "file_name": fname,
+            "name": name,
             "content": read_text(path)
         }
 
@@ -327,12 +344,16 @@ def compare_unit_txt(txt_a, txt_b):
         old_text = old_entry["content"]
         new_text = new_entry["content"]
 
+        if new_entry["name"] == old_entry["name"]:
+            name = new_entry["name"]
+        else:
+            name = f"{old_entry["name"]} ->  {new_entry["name"]}"
+
         if normalize_value(old_text) != normalize_value(new_text):
             diffs = build_line_differences(old_text, new_text)
             out["modified"].append({
                 "block_id": block_id,
-                "old_file_name": old_entry["file_name"],
-                "new_file_name": new_entry["file_name"],
+                "name": name,
                 "diffs": diffs
             })
 
@@ -354,17 +375,8 @@ def render_units_changes(unit_cmp, title_a="", title_b=""):
 
     if unit_cmp["added_units"]:
         lines.append("### ADDED+")
-        for unit_id in unit_cmp["added_units"]:
-            unit_name = ""
-            unit_data = unit_cmp.get(unit_id, {})
-
-            if "__NAME__" in unit_data:
-                unit_name = unit_data["__NAME__"]
-
-            label = f"{unit_id}"
-            if unit_name:
-                label += f" {unit_name}"
-
+        for unit_data in unit_cmp["added_units"]:
+            label = f"{unit_data[0]} {unit_data[1]}"            
             lines.append(f"- {label}")
 
     if unit_cmp["removed_units"]:
@@ -389,7 +401,7 @@ def render_units_changes(unit_cmp, title_a="", title_b=""):
         for unit_id, unit_name, ch in unit_cmp["modified_units"]:
             label = f"{unit_id}"
             if unit_name:
-                label += f" ({unit_name})"
+                label += f" {unit_name}"
 
             lines.append(f"- {label}")
 
@@ -461,13 +473,10 @@ def render_logic_changes(txt_cmp):
         lines.append("### MODIFIED")
         for item in txt_cmp["modified"]:
             block_id = item["block_id"]
-            old_file = item["old_file_name"]
-            new_file = item["new_file_name"]
+            name = item["name"]
             diffs = item["diffs"]
 
-            lines.append(f"- {block_id}")
-            lines.append(f"  - old file: {old_file}")
-            lines.append(f"  - new file: {new_file}")
+            lines.append(f"- {block_id} {name}")
 
             if not diffs:
                 lines.append("  - content changed, but no line-level diff detected")
@@ -536,7 +545,6 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
     parts.append("")
     parts.append(render_units_changes(
         unit_cmp,
-        report_a["unit_csv"]["units"],
         title_a=report_a["unit_csv"].get("title", ""),
         title_b=report_b["unit_csv"].get("title", "")
     ))

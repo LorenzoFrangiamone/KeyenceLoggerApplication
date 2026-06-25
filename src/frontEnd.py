@@ -346,27 +346,6 @@ class CompareApp(tk.Tk):
         self.next_button.config(state="normal")
         return True
 
-    # def next_page(self):
-    #     if not self.validate_current_inputs():
-    #         return
-
-    #     report_a = self.report_a_var.get().strip()
-    #     report_b = self.report_b_var.get().strip()
-
-    #     self.page1.pack_forget()
-    #     self.page2.pack(fill="both", expand=True)
-
-    #     try:
-    #         preview_text = self.preview_fn(report_a, report_b)
-
-    #         self.preview_box.delete("1.0", "end")
-    #         self.preview_box.insert("1.0", preview_text)
-
-    #         self.apply_preview_formatting()
-
-    #     except Exception as e:
-    #         messagebox.showerror("Errore preview", str(e))
-
     def next_page(self):
         if not self.validate_current_inputs():
             return
