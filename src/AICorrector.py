@@ -1,5 +1,6 @@
 from pathlib import Path
 from llama_cpp import Llama
+import sys
 
 PROMPT = """
 Sei un correttore tecnico Keyence.
@@ -58,13 +59,19 @@ Commenta l'aggiunta della variabile '#PitchNumber'
 """
 
 # src/AICorrector.py -> risalgo alla root del progetto
-BASE_DIR = Path(__file__).resolve().parent.parent
+
+# BASE_DIR = Path(__file__).resolve().parent.parent
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = Path(sys.executable).parent
+else:
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
 MODEL_PATH = BASE_DIR / "models" / "Qwen3-1.7B-Q4_K_M.gguf"
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Modello non trovato: {MODEL_PATH}")
 
-# Carica il modello una sola volta
 llm = Llama(
     model_path=str(MODEL_PATH),
     n_ctx=32768,
@@ -87,7 +94,7 @@ def AICorrection(auto, human):
         temperature=0.0,
         top_p=0.6,
         repeat_penalty=1.15,
-        max_tokens=1200
+        max_tokens=100000
 
     )
     risposta = str(risposta["choices"][0]["message"]["content"])   
