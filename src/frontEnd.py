@@ -13,6 +13,7 @@ class CompareApp(tk.Tk):
         self.validate_fn = validate_fn
         self.generate_fn = generate_fn
         self.preview_fn = preview_fn
+        self.minsize(600, 600)
 
         # ============================================================
         # STILE UI
@@ -755,11 +756,10 @@ class CompareApp(tk.Tk):
                     result = ""
                 else:
                     result = str(result)
-
-                self.after(0, lambda: self._on_correct_success(result))
-
             except Exception as e:
                 self.after(0, lambda: self._on_correct_error(e))
+            
+            self.after(0, lambda: self._on_correct_success(result))
 
         threading.Thread(target=worker, daemon=True).start()
 
