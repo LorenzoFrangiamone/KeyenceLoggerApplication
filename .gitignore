@@ -61,3 +61,6 @@ Thumbs.db
 data/
 output/
 reports/
+
+# models
+*.gguf
