@@ -2,17 +2,19 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinterweb import HtmlFrame
+import csv
 import markdown
 import threading
 from src.AICorrector import AICorrection
 
 class CompareApp(tk.Tk):
-    def __init__(self, validate_fn, generate_fn, preview_fn):
+    def __init__(self, validate_fn, generate_fn, preview_fn, get_version):
         super().__init__()
 
         self.validate_fn = validate_fn
         self.generate_fn = generate_fn
         self.preview_fn = preview_fn
+        self.get_version = get_version
         self.minsize(600, 600)
 
         # ============================================================
@@ -369,6 +371,18 @@ class CompareApp(tk.Tk):
 
         tk.Button(
             btn_frame,
+            text="Update Changes_*.csv",
+            command=self.on_update_changes,
+            width=18,
+            height=2,
+            bg=self.ACCENT2,
+            fg=self.TEXT,
+            font=self.FONT_BUTTON,
+            relief="flat"
+        ).pack(side="right", padx=5)
+
+        tk.Button(
+            btn_frame,
             text="Generate Log",
             command=self.on_generate,
             width=18,
@@ -377,7 +391,9 @@ class CompareApp(tk.Tk):
             fg=self.TEXT,
             font=self.FONT_BUTTON,
             relief="flat"
-        ).pack(side="right")
+        ).pack(side="right", padx=5)
+
+        
 
         # contenuto iniziale
         self.set_preview_markdown("""
@@ -810,3 +826,67 @@ class CompareApp(tk.Tk):
 
         self.comment_box.delete("1.0", "end")
         self.comment_box.insert("1.0", accepted_text)
+
+    def on_update_changes(self):
+        csv_path = filedialog.asksaveasfilename(
+            title="Seleziona o crea un file Changes CSV",
+            defaultextension=".csv",
+            initialfile="Changes_.csv",
+            filetypes=[
+                ("CSV files", "*.csv"),
+                ("All files", "*.*")
+            ]
+        )
+
+        if not csv_path:
+            print("Operazione annullata")
+            return
+
+        # Recupero dati
+        report_b = self.report_b_var.get().strip()
+
+        folder_name = self.report_b_var.get()
+        version = self.get_version(report_b)
+        comment_text = self.comment_box.get("1.0", "end-1c").strip()
+
+        # DEBUG: controlla cosa stai davvero leggendo
+        print("DEBUG folder_name:", repr(folder_name))
+        print("DEBUG version:", repr(version))
+        print("DEBUG comment_text:", repr(comment_text))
+        print("DEBUG csv_path:", csv_path)
+
+        # Controlla se il file esiste ed è vuoto
+        file_exists = os.path.exists(csv_path)
+        file_is_empty = (not file_exists) or os.path.getsize(csv_path) == 0
+
+        try:
+            # Se il file esiste e non è vuoto, controlla che finisca con newline
+            # così la nuova riga non viene attaccata all'ultima esistente
+            if file_exists and not file_is_empty:
+                with open(csv_path, "rb") as check_file:
+                    check_file.seek(-1, os.SEEK_END)
+                    last_char = check_file.read(1)
+
+                if last_char not in [b"\n", b"\r"]:
+                    with open(csv_path, "a", encoding="utf-8", newline="") as fix_file:
+                        fix_file.write("\n")
+
+            # IMPORTANTE: "a" append, non sovrascrive
+            with open(csv_path, "a", encoding="utf-8", newline="") as file:
+                writer = csv.writer(file, delimiter=";")
+
+                if file_is_empty:
+                    writer.writerow(["Folder", "Version", "Comment"])
+
+                writer.writerow([folder_name, version, comment_text])
+
+            messagebox.showinfo(
+                "CSV aggiornato",
+                f"Riga aggiunta correttamente al file:\n{csv_path}"
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Errore",
+                f"Errore durante l'aggiornamento del CSV:\n{e}"
+            )

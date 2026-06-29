@@ -42,7 +42,6 @@ auto = """
         - `'Commento aggiunto`
 
 ## Comments:
-Added U0009 Modified U0004 Edge Pitch: added Gaussian filter modified U0006
 
 
 Qualsiasi testi che non rispetti il formato richiesto è un errore.
@@ -52,22 +51,3 @@ human = "aggiunta u9, modif.u4 e u6"
 result = AICorrection(auto, human)
 
 print(result)
-
-
-# llm = Llama(
-#     model_path="models/Qwen3-1.7B-Q4_K_M.gguf",
-#     chat_format="chatml",
-#     n_ctx=8192,
-#     verbose=False
-# )
-
-# r = llm.create_completion(   
-#     prompt="scrivi solo: ciao!",
-#     temperature=0,
-#     top_p=0.5,
-#     repeat_penalty=1.15,
-#     max_tokens=200
-
-# )
-
-# print(r)

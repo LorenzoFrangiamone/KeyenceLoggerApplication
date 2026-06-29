@@ -39,6 +39,33 @@ def normalize_value(v):
     return "" if v is None else str(v).strip()
 
 
+def get_version(folder_path):
+    pattern = os.path.join(folder_path, "*variable_*.csv")
+    matching_files = glob.glob(pattern)
+
+    if not matching_files:
+        print("Nessun CSV con 'variable_' nel nome trovato in:", folder_path)
+        return None
+    
+    path = matching_files[0]
+    rows = read_csv_rows(path)
+
+    keywords = {
+        "#Version",
+        "#Versione"
+    }
+
+    for row in rows:
+        print("debug "+row[0])
+        if row[0] in keywords:
+            if len(row) > 8:
+                return "'"+row[8].strip()
+            else:
+                return ""
+
+    return ""
+
+
 # ============================================================
 # VALIDAZIONE CARTELLE
 # ============================================================
@@ -114,7 +141,6 @@ def parse_unit_csv(path):
 
     return {"title": result["title"], "units": dict(result["units"])}
 
-
 def parse_variable_csv(path):
     rows = read_csv_rows(path)
     if not rows:
@@ -160,7 +186,6 @@ def extract_logic_block_id(filename):
         return "U" + m.group(1).upper()[3:]
     return os.path.splitext(base)[0]
 
-
 def parse_unit_txt_files(folder):
     txt_files = find_all("unit_*.txt", folder)
     result = {}
@@ -174,7 +199,6 @@ def parse_unit_txt_files(folder):
         }
 
     return result
-
 
 # ============================================================
 # LOAD REPORT
@@ -200,7 +224,6 @@ def load_report(folder):
     report["unit_txt"] = parse_unit_txt_files(folder)
 
     return report
-
 
 # ============================================================
 # COMPARE
