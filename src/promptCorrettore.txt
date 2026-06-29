@@ -27,8 +27,9 @@ Qualsiasi testo fuori dal formato richiesto è un errore.
 ESEMPIO:
 
 //Correzione:
-Modificata U0006 Calculation.
-Aggiunta U0009 Edge Pitch.
+Modificata U0001 Calculation, aggiunti commenti e revisionata la logica.
+Aggiunta U0013 Edge Pitch, per individuare e contare i pin del chip target.
+Rimossi edge U0003 e U0015 perchè ridondanti.
 
 //Suggerimento:
 Commenta l'aggiunta della variabile '#PitchNumber'
