@@ -587,6 +587,34 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
 
     return output_file
 
+def append_change_record(csv_path, folder_name, version, comment):
+    """
+    Aggiunge una riga [folder_name, version, comment] a csv_path (delimitatore ";").
+    Scrive l'intestazione se il file è nuovo o vuoto, e si assicura che il
+    file termini con un newline prima di aggiungere la riga, altrimenti
+    finirebbe attaccata all'ultima riga esistente.
+    """
+    file_exists = os.path.exists(csv_path)
+    file_is_empty = (not file_exists) or os.path.getsize(csv_path) == 0
+
+    if file_exists and not file_is_empty:
+        with open(csv_path, "rb") as check_file:
+            check_file.seek(-1, os.SEEK_END)
+            last_char = check_file.read(1)
+
+        if last_char not in [b"\n", b"\r"]:
+            with open(csv_path, "a", encoding="utf-8", newline="") as fix_file:
+                fix_file.write("\n")
+
+    with open(csv_path, "a", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, delimiter=";")
+
+        if file_is_empty:
+            writer.writerow(["Folder", "Version", "Comment"])
+
+        writer.writerow([folder_name, version, comment])
+
+
 def build_preview(report_a_path, report_b_path):
     report_a = load_report(report_a_path)
     report_b = load_report(report_b_path)

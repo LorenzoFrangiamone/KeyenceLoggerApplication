@@ -1,4 +1,4 @@
-from src.frontEnd import CompareApp
+from src.gui.app import CompareApp
 from src.backEnd import validate_report_folder, generate_changelog, build_preview, get_version
 
 def main():
