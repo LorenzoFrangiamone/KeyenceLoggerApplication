@@ -46,6 +46,11 @@ class DiffTree(ttk.Treeview):
         self._add_units_section(comparison["units"])
         self._add_variables_section(comparison["variables"])
         self._add_logic_section(comparison["logic"])
+        self._add_env_section(
+            comparison["env"],
+            comparison.get("env_title_a", ""),
+            comparison.get("env_title_b", "")
+        )
 
     # ============================================================
     # UNITS
@@ -149,6 +154,32 @@ class DiffTree(ttk.Treeview):
                         new_node = self.insert(diff_node, "end", text="NEW", tags=("added",))
                         for line in d["new_lines"]:
                             self.insert(new_node, "end", text=line, tags=("added",))
+
+    # ============================================================
+    # ENVIRONMENT
+    # ============================================================
+    def _add_env_section(self, env_cmp, title_a="", title_b=""):
+        root = self.insert("", "end", text="Environment", open=True, tags=("section",))
+
+        if title_a != title_b:
+            self.insert(root, "end", text=f'Title: "{title_a}" -> "{title_b}"', tags=("modified",))
+
+        if env_cmp["added"]:
+            added = self.insert(root, "end", text=f"ADDED+ ({len(env_cmp['added'])})", tags=("added",))
+            for key in env_cmp["added"]:
+                self.insert(added, "end", text=key, tags=("added",))
+
+        if env_cmp["removed"]:
+            removed = self.insert(root, "end", text=f"REMOVED- ({len(env_cmp['removed'])})", tags=("removed",))
+            for key in env_cmp["removed"]:
+                self.insert(removed, "end", text=key, tags=("removed",))
+
+        if env_cmp["modified"]:
+            modified = self.insert(root, "end", text=f"MODIFIED ({len(env_cmp['modified'])})", tags=("modified",))
+            for key, changes in env_cmp["modified"]:
+                key_node = self.insert(modified, "end", text=key, tags=("modified",))
+                for field, (old, new) in changes.items():
+                    self.insert(key_node, "end", text=f'{field}: "{old}" -> "{new}"', tags=("muted",))
 
     @staticmethod
     def _format_diff_label(d):

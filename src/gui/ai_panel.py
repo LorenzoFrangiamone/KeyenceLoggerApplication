@@ -108,9 +108,12 @@ class AIPanel(tk.Frame):
             return
 
         if not models:
-            messagebox.showwarning(
-                "Nessun modello",
-                "Nessun modello AI (.gguf) trovato nella cartella 'models'."
+            self.notes_box.config(state="normal")
+            self.notes_box.delete("1.0", "end")
+            self.notes_box.insert(
+                "1.0",
+                "Nessun modello AI (.gguf) trovato nella cartella 'models'.\n"
+                "Copia un modello in 'models' e riavvia l'app per usare la correzione AI."
             )
             return
 

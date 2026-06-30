@@ -1,0 +1,29 @@
+Cartella modelli AI (KCompareAgent)
+====================================
+
+Questa cartella deve contenere i file modello in formato GGUF usati dal
+pannello AI per correggere/suggerire il commento del changelog.
+
+Il pacchetto portable NON include nessun modello: vanno scaricati e
+copiati qui manualmente. Al primo avvio (cartella vuota) il pannello AI
+mostra un avviso e resta disabilitato finché non viene aggiunto almeno
+un modello.
+
+L'app rileva automaticamente CPU/RAM/GPU della macchina e, fra i modelli
+presenti in questa cartella, propone come default quello più adatto
+all'hardware rilevato (selezionabile comunque a mano dal menu a tendina
+accanto al pulsante "Correct").
+
+Modelli consigliati (nomi riconosciuti con etichetta descrittiva):
+- Qwen3-1.7B-Q4_K_M.gguf
+  Leggero, gira bene su CPU. Adatto a PC d'ufficio senza GPU dedicata.
+- Qwen2.5-3B-Instruct-Q4_K_M.gguf
+  Intermedio. Adatto a PC con più RAM (16GB+) o una GPU non troppo potente.
+- qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf
+  (richiede anche qwen2.5-7b-instruct-q5_k_m-00002-of-00002.gguf nella
+  stessa cartella: i due file sono le due metà dello stesso modello)
+  Più potente, GPU NVIDIA con almeno 6GB di VRAM consigliata.
+
+Qualsiasi altro file .gguf messo in questa cartella viene comunque
+mostrato nel menu a tendina (con il proprio nome file), anche se non è
+fra quelli elencati sopra.

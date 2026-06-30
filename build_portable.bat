@@ -25,9 +25,13 @@ python -m PyInstaller ^
   --name %APP_NAME% ^
   Main.py
 
-echo Copying models...
+echo Preparing models folder...
 mkdir dist\%APP_NAME%\models
-copy models\*.gguf dist\%APP_NAME%\models\
+copy models\LEGGIMI.txt dist\%APP_NAME%\models\
+
+echo Compressing portable package...
+if exist dist\%APP_NAME%.zip del dist\%APP_NAME%.zip
+powershell -NoProfile -Command "Compress-Archive -Path 'dist\%APP_NAME%' -DestinationPath 'dist\%APP_NAME%.zip'"
 
 echo Done.
 pause

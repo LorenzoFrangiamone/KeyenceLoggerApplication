@@ -90,6 +90,7 @@ def validate_report_folder(folder):
     unit_csv = find_first("unit_*.csv", folder)
     var_csv = find_first("variable_*.csv", folder)
     unit_txt = find_all("unit_*.txt", folder)
+    env_csv = find_first("env_*.csv", folder)
 
     if not unit_csv:
         errors.append("Manca un file unit_*.csv")
@@ -99,6 +100,9 @@ def validate_report_folder(folder):
 
     if not unit_txt:
         warnings.append("Nessun file unit_*.txt trovato")
+
+    if not env_csv:
+        warnings.append("Nessun file env_*.csv trovato")
 
     return len(errors) == 0, errors, warnings
 
@@ -159,6 +163,33 @@ def parse_variable_csv(path):
 
     return data
 
+def parse_env_csv(path):
+    rows = read_csv_rows(path)
+    result = {"title": "", "registers": {}}
+
+    if not rows:
+        return result
+
+    first = rows[0]
+    start_idx = 0
+    if len(first) >= 2 and first[1] == "Env":
+        result["title"] = first[2] if len(first) > 2 else ""
+        start_idx = 1
+
+    for row in rows[start_idx:]:
+        row = row + [""] * (3 - len(row))
+        key, description, value = row[:3]
+
+        if not key:
+            continue
+
+        result["registers"][key] = {
+            "description": description,
+            "value": value
+        }
+
+    return result
+
 def find_txt_unit_name(unitId, folder):
     unit_csv_path = find_first("unit_*.csv", folder)
     rows = read_csv_rows(unit_csv_path)
@@ -210,17 +241,22 @@ def load_report(folder):
         "folder": folder,
         "unit_csv": {"title": "", "units": {}},
         "variables": {},
-        "unit_txt": {}
+        "unit_txt": {},
+        "env_csv": {"title": "", "registers": {}}
     }
 
     unit_csv_path = find_first("unit_*.csv", folder)
     var_csv_path = find_first("variable_*.csv", folder)
+    env_csv_path = find_first("env_*.csv", folder)
 
     if unit_csv_path:
         report["unit_csv"] = parse_unit_csv(unit_csv_path)
 
     if var_csv_path:
         report["variables"] = parse_variable_csv(var_csv_path)
+
+    if env_csv_path:
+        report["env_csv"] = parse_env_csv(env_csv_path)
 
     report["unit_txt"] = parse_unit_txt_files(folder)
 
@@ -342,6 +378,34 @@ def compare_variables(vars_a, vars_b):
 
         if changes:
             out["modified"].append((name, changes))
+
+    return out
+
+
+def compare_env(registers_a, registers_b):
+    out = {
+        "added": [],
+        "removed": [],
+        "modified": []
+    }
+
+    keys_a = set(registers_a.keys())
+    keys_b = set(registers_b.keys())
+
+    out["added"] = sorted(keys_b - keys_a)
+    out["removed"] = sorted(keys_a - keys_b)
+
+    for key in sorted(keys_a & keys_b):
+        a = registers_a[key]
+        b = registers_b[key]
+
+        changes = {}
+        for field in ("description", "value"):
+            if normalize_value(a.get(field)) != normalize_value(b.get(field)):
+                changes[field] = (a.get(field, ""), b.get(field, ""))
+
+        if changes:
+            out["modified"].append((key, changes))
 
     return out
 
@@ -496,6 +560,37 @@ def render_variables_changes(var_cmp):
     return "\n".join(lines)
 
 
+def render_env_changes(env_cmp, title_a="", title_b=""):
+    lines = []
+    lines.append("## Environment")
+    lines.append("")
+
+    if title_a != title_b:
+        lines.append(f'- Environment title changed: "{title_a}" -> "{title_b}"')
+        lines.append("")
+
+    if env_cmp["added"]:
+        lines.append("### ADDED+")
+        for key in env_cmp["added"]:
+            lines.append(f"- {key}")
+
+    if env_cmp["removed"]:
+        lines.append("")
+        lines.append("### REMOVED-")
+        for key in env_cmp["removed"]:
+            lines.append(f"- {key}")
+
+    if env_cmp["modified"]:
+        lines.append("")
+        lines.append("### MODIFIED")
+        for key, changes in env_cmp["modified"]:
+            lines.append(f"- {key}")
+            for field, (old, new) in changes.items():
+                lines.append(f'  - {field}: "{old}" -> "{new}"')
+
+    return "\n".join(lines)
+
+
 def render_logic_changes(txt_cmp):
     lines = []
     lines.append("## Logic blocks (`unit_*.txt`)")
@@ -583,6 +678,7 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
     unit_cmp = compare_units(report_a["unit_csv"]["units"], report_b["unit_csv"]["units"])
     var_cmp = compare_variables(report_a["variables"], report_b["variables"])
     txt_cmp = compare_unit_txt(report_a["unit_txt"], report_b["unit_txt"])
+    env_cmp = compare_env(report_a["env_csv"]["registers"], report_b["env_csv"]["registers"])
 
     parts = []
     parts.append(f"# ChangeLog__{name_a}__vs__{name_b}")
@@ -596,6 +692,12 @@ def generate_changelog(report_a_path, report_b_path, output_dir, comment_text):
     parts.append(render_variables_changes(var_cmp))
     parts.append("")
     parts.append(render_logic_changes(txt_cmp))
+    parts.append("")
+    parts.append(render_env_changes(
+        env_cmp,
+        title_a=report_a["env_csv"].get("title", ""),
+        title_b=report_b["env_csv"].get("title", "")
+    ))
     parts.append("")
     parts.append("## Comments:")
     parts.append(comment_text.strip() if comment_text.strip() else "")
@@ -661,6 +763,12 @@ def build_comparison(report_a_path, report_b_path):
             report_a["unit_txt"],
             report_b["unit_txt"]
         ),
+        "env": compare_env(
+            report_a["env_csv"]["registers"],
+            report_b["env_csv"]["registers"]
+        ),
+        "env_title_a": report_a["env_csv"].get("title", ""),
+        "env_title_b": report_b["env_csv"].get("title", ""),
     }
 
 
@@ -720,5 +828,11 @@ def build_preview(report_a_path, report_b_path):
     parts.append(render_variables_changes(comparison["variables"]))
     parts.append("\n")
     parts.append(render_logic_changes(comparison["logic"]))
+    parts.append("\n")
+    parts.append(render_env_changes(
+        comparison["env"],
+        comparison["env_title_a"],
+        comparison["env_title_b"]
+    ))
 
     return "\n".join(parts)

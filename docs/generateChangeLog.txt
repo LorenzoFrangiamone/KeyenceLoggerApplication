@@ -16,6 +16,10 @@ where: type can be env, unit or variable
 ### Files
 Each report folder contains:
 #### env_(...).csv
+Snapshot dei registri di configurazione del controller (configurazione
+telecamera, parametri illuminazione, settaggi hardware/controller, scaling/
+compensazioni). Prima riga: `,Env,<titolo ambiente>`. Ogni riga successiva è
+un registro: `<RegisterKey>,"<descrizione>","<valore>",`.
 #### unit_(...).csv
 Where colunmns are: UnitID, Parameter Name, Inspect, Value
 For every unit there are many rows which contains its parameters.
@@ -47,6 +51,15 @@ List all the variables that are present in <id2> report and not on <id1> report.
 List all the variables that are present in <id1> report and not on <id2> report.
 ##### MODIFIED
 List all variables whose characteristics have been changed, for every variable list which parameters has been changed from which to which value.
+
+#### Environment
+Thake the informations from env_(...).csv. This is the last comparison section.
+##### ADDED+
+List all the registers that are present in <id2> report and not on <id1> report.
+##### REMOVED-
+List all the registers that are present in <id1> report and not on <id2> report.
+##### MODIFIED
+List all registers whose description or value have been changed, for every register list which field has been changed from which to which value.
 
 #### Interpretation
 Write few lines about the functional difference between the 2 applications.
