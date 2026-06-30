@@ -6,9 +6,11 @@ from . import theme
 
 
 class InputPage(tk.Frame):
-    def __init__(self, parent, validate_fn, on_next):
+    def __init__(self, parent, validate_fn, load_paths_fn, save_paths_fn, on_next):
         super().__init__(parent, bg=theme.BG)
         self.validate_fn = validate_fn
+        self.load_paths_fn = load_paths_fn
+        self.save_paths_fn = save_paths_fn
         self.on_next = on_next
 
         self.report_a_var = tk.StringVar()
@@ -16,6 +18,7 @@ class InputPage(tk.Frame):
         self.output_var = tk.StringVar()
 
         self._build()
+        self._load_saved_paths()
 
     def _build(self):
         card = tk.Frame(
@@ -172,7 +175,15 @@ class InputPage(tk.Frame):
             self.output_var.get().strip()
         )
 
+    def _load_saved_paths(self):
+        saved = self.load_paths_fn()
+        self.report_a_var.set(saved.get("report_a", ""))
+        self.report_b_var.set(saved.get("report_b", ""))
+        self.output_var.set(saved.get("output_dir", ""))
+
     def _handle_next(self):
         if not self.validate_current_inputs():
             return
-        self.on_next(*self.get_paths())
+        paths = self.get_paths()
+        self.save_paths_fn(*paths)
+        self.on_next(*paths)

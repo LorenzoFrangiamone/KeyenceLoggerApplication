@@ -6,7 +6,7 @@ from .page_preview import PreviewPage
 
 
 class CompareApp(tk.Tk):
-    def __init__(self, validate_fn, generate_fn, preview_fn, compare_fn, get_version):
+    def __init__(self, validate_fn, generate_fn, preview_fn, compare_fn, get_version, load_paths_fn, save_paths_fn):
         super().__init__()
 
         self.minsize(600, 600)
@@ -15,7 +15,13 @@ class CompareApp(tk.Tk):
         self.configure(bg=theme.BG)
         self.resizable(True, True)
 
-        self.page1 = InputPage(self, validate_fn=validate_fn, on_next=self._go_to_preview)
+        self.page1 = InputPage(
+            self,
+            validate_fn=validate_fn,
+            load_paths_fn=load_paths_fn,
+            save_paths_fn=save_paths_fn,
+            on_next=self._go_to_preview
+        )
         self.page2 = PreviewPage(
             self,
             preview_fn=preview_fn,

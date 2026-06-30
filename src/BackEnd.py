@@ -1,6 +1,7 @@
 import os
 import csv
 import glob
+import json
 import re
 from collections import defaultdict
 from difflib import SequenceMatcher
@@ -634,6 +635,48 @@ def build_comparison(report_a_path, report_b_path):
             report_b["unit_txt"]
         ),
     }
+
+
+# ============================================================
+# PERSISTENZA ULTIMI PERCORSI USATI
+# ============================================================
+
+def get_last_paths_config_path():
+    config_dir = os.path.join(os.getenv("APPDATA") or os.path.expanduser("~"), "KCompareAgent")
+    return os.path.join(config_dir, "last_paths.json")
+
+
+def load_last_paths():
+    """
+    Ritorna gli ultimi percorsi (report_a, report_b, output_dir) usati con
+    successo nell'esecuzione precedente, o stringhe vuote se non disponibili
+    o se il file di configurazione è assente/corrotto.
+    """
+    defaults = {"report_a": "", "report_b": "", "output_dir": ""}
+    config_path = get_last_paths_config_path()
+
+    if not os.path.exists(config_path):
+        return defaults
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return defaults
+
+    defaults.update({key: data.get(key, "") for key in defaults})
+    return defaults
+
+
+def save_last_paths(report_a, report_b, output_dir):
+    config_path = get_last_paths_config_path()
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(
+            {"report_a": report_a, "report_b": report_b, "output_dir": output_dir},
+            f, ensure_ascii=False, indent=2
+        )
 
 
 def build_preview(report_a_path, report_b_path):
