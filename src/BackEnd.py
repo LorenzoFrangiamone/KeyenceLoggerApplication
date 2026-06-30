@@ -404,13 +404,7 @@ def render_units_changes(unit_cmp, title_a="", title_b=""):
     if unit_cmp["removed_units"]:
         lines.append("")
         lines.append("### REMOVED-")
-        for unit_id in unit_cmp["removed_units"]:
-            unit_name = ""
-            unit_data = unit_cmp.get(unit_id, {})
-
-            if "__NAME__" in unit_data:
-                unit_name = unit_data["__NAME__"]
-
+        for unit_id, unit_name in unit_cmp["removed_units"]:
             label = f"{unit_id}"
             if unit_name:
                 label += f" ({unit_name})"
@@ -615,35 +609,46 @@ def append_change_record(csv_path, folder_name, version, comment):
         writer.writerow([folder_name, version, comment])
 
 
-def build_preview(report_a_path, report_b_path):
+def build_comparison(report_a_path, report_b_path):
+    """
+    Carica e confronta due cartelle report, ritornando i dati strutturati
+    del diff (non renderizzati) cosi' che chi li consuma possa scegliere
+    come presentarli (Markdown, albero gerarchico, ecc).
+    """
     report_a = load_report(report_a_path)
     report_b = load_report(report_b_path)
 
-    unit_cmp = compare_units(
-        report_a["unit_csv"]["units"],
-        report_b["unit_csv"]["units"]
-    )
+    return {
+        "title_a": report_a["unit_csv"].get("title", ""),
+        "title_b": report_b["unit_csv"].get("title", ""),
+        "units": compare_units(
+            report_a["unit_csv"]["units"],
+            report_b["unit_csv"]["units"]
+        ),
+        "variables": compare_variables(
+            report_a["variables"],
+            report_b["variables"]
+        ),
+        "logic": compare_unit_txt(
+            report_a["unit_txt"],
+            report_b["unit_txt"]
+        ),
+    }
 
-    var_cmp = compare_variables(
-        report_a["variables"],
-        report_b["variables"]
-    )
 
-    txt_cmp = compare_unit_txt(
-        report_a["unit_txt"],
-        report_b["unit_txt"]
-    )
+def build_preview(report_a_path, report_b_path):
+    comparison = build_comparison(report_a_path, report_b_path)
 
     parts = []
 
     parts.append(render_units_changes(
-        unit_cmp,
-        report_a["unit_csv"].get("title", ""),
-        report_b["unit_csv"].get("title", "")
+        comparison["units"],
+        comparison["title_a"],
+        comparison["title_b"]
     ))
     parts.append("\n")
-    parts.append(render_variables_changes(var_cmp))
+    parts.append(render_variables_changes(comparison["variables"]))
     parts.append("\n")
-    parts.append(render_logic_changes(txt_cmp))
+    parts.append(render_logic_changes(comparison["logic"]))
 
     return "\n".join(parts)

@@ -6,7 +6,7 @@ from .page_preview import PreviewPage
 
 
 class CompareApp(tk.Tk):
-    def __init__(self, validate_fn, generate_fn, preview_fn, get_version):
+    def __init__(self, validate_fn, generate_fn, preview_fn, compare_fn, get_version):
         super().__init__()
 
         self.minsize(600, 600)
@@ -19,6 +19,7 @@ class CompareApp(tk.Tk):
         self.page2 = PreviewPage(
             self,
             preview_fn=preview_fn,
+            compare_fn=compare_fn,
             generate_fn=generate_fn,
             get_version=get_version,
             on_back=self._go_to_input

@@ -1,27 +1,20 @@
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from tkinterweb import HtmlFrame
 
 from src.backEnd import append_change_record
 from . import theme
 from .ai_panel import AIPanel
-from .html_render import render_markdown, wrap_html_body
+from .diff_tree import DiffTree
 
-DEFAULT_PREVIEW_MD = """
-# Preview Differences
-
-Nessun contenuto disponibile.
-
-- Carica o genera una preview
-- Controlla le modifiche
-- Inserisci il commento finale
-"""
+PLACEHOLDER_TEXT = "Seleziona Report A e Report B, poi premi Next per generare la preview."
 
 
 class PreviewPage(tk.Frame):
-    def __init__(self, parent, preview_fn, generate_fn, get_version, on_back):
+    def __init__(self, parent, preview_fn, compare_fn, generate_fn, get_version, on_back):
         super().__init__(parent, bg=theme.BG)
         self.preview_fn = preview_fn
+        self.compare_fn = compare_fn
         self.generate_fn = generate_fn
         self.get_version = get_version
         self.on_back = on_back
@@ -30,10 +23,9 @@ class PreviewPage(tk.Frame):
         self.report_b = ""
         self.output_dir = ""
         self.preview_markdown = ""
-        self.preview_html = ""
 
         self._build()
-        self.set_preview_markdown(DEFAULT_PREVIEW_MD)
+        self.diff_tree.show_placeholder(PLACEHOLDER_TEXT)
 
     def _build(self):
         card = tk.Frame(
@@ -76,7 +68,7 @@ class PreviewPage(tk.Frame):
         main_container.grid_columnconfigure(1, weight=1, uniform="col")
         main_container.grid_rowconfigure(0, weight=1)
 
-        # LEFT COLUMN: PREVIEW
+        # LEFT COLUMN: DIFF TREE
         left_frame = tk.Frame(main_container, bg=theme.CARD)
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
@@ -98,13 +90,15 @@ class PreviewPage(tk.Frame):
             relief="solid"
         )
         preview_container.grid(row=1, column=0, sticky="nsew")
+        preview_container.grid_rowconfigure(0, weight=1)
+        preview_container.grid_columnconfigure(0, weight=1)
 
-        self.preview_box = HtmlFrame(
-            preview_container,
-            messages_enabled=False,
-            horizontal_scrollbar="auto"
-        )
-        self.preview_box.pack(fill="both", expand=True, padx=1, pady=1)
+        self.diff_tree = DiffTree(preview_container)
+        self.diff_tree.grid(row=0, column=0, sticky="nsew", padx=(1, 0), pady=1)
+
+        tree_scroll = tk.Scrollbar(preview_container, orient="vertical", command=self.diff_tree.yview)
+        tree_scroll.grid(row=0, column=1, sticky="ns")
+        self.diff_tree.configure(yscrollcommand=tree_scroll.set)
 
         # RIGHT COLUMN: COMMENT + AI PANEL
         right_frame = tk.Frame(main_container, bg=theme.CARD)
@@ -194,7 +188,7 @@ class PreviewPage(tk.Frame):
         ).pack(side="right", padx=5)
 
     # ============================================================
-    # PREVIEW LOADING / RENDERING
+    # PREVIEW LOADING
     # ============================================================
     def load_preview(self, report_a, report_b, output_dir):
         self.report_a = report_a
@@ -202,20 +196,13 @@ class PreviewPage(tk.Frame):
         self.output_dir = output_dir
 
         try:
-            preview_text = self.preview_fn(report_a, report_b)
-            self.set_preview_markdown(preview_text)
+            self.preview_markdown = self.preview_fn(report_a, report_b)
+            comparison = self.compare_fn(report_a, report_b)
         except Exception as e:
             messagebox.showerror("Errore preview", str(e))
+            return
 
-    def set_preview_markdown(self, md_text: str):
-        self.preview_markdown = md_text
-        self.preview_html = render_markdown(md_text)
-        self.preview_box.load_html(self.preview_html)
-
-    def set_preview_html(self, html_body: str):
-        self.preview_markdown = ""
-        self.preview_html = wrap_html_body(html_body)
-        self.preview_box.load_html(self.preview_html)
+        self.diff_tree.load_comparison(comparison)
 
     def _set_comment_text(self, text):
         self.comment_box.delete("1.0", "end")
@@ -249,9 +236,10 @@ class PreviewPage(tk.Frame):
 
         comment_text = self.comment_box.get("1.0", "end-1c").strip()
         version = self.get_version(self.report_b)
+        folder_name = os.path.basename(os.path.normpath(self.report_b))
 
         try:
-            append_change_record(csv_path, self.report_b, version, comment_text)
+            append_change_record(csv_path, folder_name, version, comment_text)
             messagebox.showinfo(
                 "CSV aggiornato",
                 f"Riga aggiunta correttamente al file:\n{csv_path}"
