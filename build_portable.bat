@@ -25,9 +25,9 @@ python -m PyInstaller ^
   --name %APP_NAME% ^
   Main.py
 
-echo Copying model...
+echo Copying models...
 mkdir dist\%APP_NAME%\models
-copy models\Qwen3-1.7B-Q4_K_M.gguf dist\%APP_NAME%\models\
+copy models\*.gguf dist\%APP_NAME%\models\
 
 echo Done.
 pause

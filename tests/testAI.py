@@ -1,11 +1,12 @@
 import sys
 from pathlib import Path
-from llama_cpp import Llama
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-from src.AICorrector import AICorrection
+from src.AICorrector import AICorrection, MODELS_DIR, load_model
+
+load_model(MODELS_DIR / "qwen2.5-7b-instruct-q5_k_m-00001-of-00002.gguf")
 
 auto = """
 # ChangeLog__report0000__vs__report0004
