@@ -2,7 +2,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
-from src.backEnd import append_change_record
+from src.backEnd import append_change_record, list_autocomplete_terms
 from . import theme
 from .ai_panel import AIPanel
 from .diff_tree import DiffTree
@@ -23,6 +23,8 @@ class PreviewPage(tk.Frame):
         self.report_b = ""
         self.output_dir = ""
         self.preview_markdown = ""
+        self.autocomplete_terms = []
+        self._tab_complete_state = None
 
         self._build()
         self.diff_tree.show_placeholder(PLACEHOLDER_TEXT)
@@ -137,6 +139,7 @@ class PreviewPage(tk.Frame):
             yscrollcommand=comment_scroll.set
         )
         self.comment_box.pack(side="left", fill="both", expand=True)
+        self.comment_box.bind("<Tab>", self._on_comment_tab)
 
         comment_scroll.config(command=self.comment_box.yview)
 
@@ -198,15 +201,65 @@ class PreviewPage(tk.Frame):
         try:
             self.preview_markdown = self.preview_fn(report_a, report_b)
             comparison = self.compare_fn(report_a, report_b)
+            terms = list_autocomplete_terms(report_a) | list_autocomplete_terms(report_b)
         except Exception as e:
             messagebox.showerror("Errore preview", str(e))
             return
 
         self.diff_tree.load_comparison(comparison)
+        self.autocomplete_terms = sorted(terms, key=str.lower)
+        self._tab_complete_state = None
 
     def _set_comment_text(self, text):
         self.comment_box.delete("1.0", "end")
         self.comment_box.insert("1.0", text)
+
+    # ============================================================
+    # AUTOCOMPLETAMENTO COMMENTO (TAB)
+    # ============================================================
+    def _on_comment_tab(self, event):
+        text = self.comment_box
+        insert_idx = text.index("insert")
+
+        state = self._tab_complete_state
+        if state and text.compare(insert_idx, "==", state["end"]):
+            state["current"] = (state["current"] + 1) % len(state["matches"])
+            return self._apply_completion(state["start"], insert_idx, state["matches"][state["current"]], state)
+
+        line_start = text.index("insert linestart")
+        line_text = text.get(line_start, insert_idx)
+
+        found = self._find_completion_matches(line_text)
+        if found is None:
+            self._tab_complete_state = None
+            return None
+
+        offset, matches = found
+        start_idx = text.index(f"{line_start} +{offset}c")
+        new_state = {"start": start_idx, "matches": matches, "current": 0}
+        return self._apply_completion(start_idx, insert_idx, matches[0], new_state)
+
+    def _find_completion_matches(self, line_text):
+        """
+        Cerca, fra tutti i suffissi non vuoti della porzione di riga già
+        digitata (dal più lungo al più corto), il primo che è prefisso
+        (case-insensitive) di almeno un termine noto. Questo permette il
+        completamento ovunque nella riga, non solo a inizio riga.
+        """
+        for offset in range(len(line_text)):
+            fragment = line_text[offset:]
+            matches = [t for t in self.autocomplete_terms if t.lower().startswith(fragment.lower())]
+            if matches:
+                return offset, matches
+        return None
+
+    def _apply_completion(self, start_idx, old_end, replacement, state):
+        text = self.comment_box
+        text.delete(start_idx, old_end)
+        text.insert(start_idx, replacement)
+        state["end"] = text.index(f"{start_idx} +{len(replacement)}c")
+        self._tab_complete_state = state
+        return "break"
 
     # ============================================================
     # CALLBACKS

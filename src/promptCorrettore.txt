@@ -12,6 +12,8 @@ Regole:
 
 - Correggi grammatica e ortografia di HUMAN.
 - Mantieni il significato.
+- <testo corretto> è sempre in linguaggio umano.
+- Non rispondere con testo strutturato md.
 - Non inventare informazioni.
 - Non riportare AUTO.
 - Non riportare HUMAN.

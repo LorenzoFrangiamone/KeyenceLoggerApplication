@@ -10,7 +10,7 @@ class CompareApp(tk.Tk):
         super().__init__()
 
         self.minsize(600, 600)
-        self.title("Compare Export Agent v3")
+        self.title("Compare Export Agent v01")
         self.geometry("860x520")
         self.configure(bg=theme.BG)
         self.resizable(True, True)

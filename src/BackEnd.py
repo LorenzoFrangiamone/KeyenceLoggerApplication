@@ -226,6 +226,33 @@ def load_report(folder):
 
     return report
 
+
+def list_autocomplete_terms(folder):
+    """
+    Ritorna l'insieme dei nomi (unit ID/nome, variabili, blocchi logici)
+    presenti in un report, da usare come dizionario per l'autocompletamento
+    del commento. Ogni nome è preso per intero (un campo CSV/riga), non
+    spezzato per spazi.
+    """
+    report = load_report(folder)
+    terms = set()
+
+    for uid, params in report["unit_csv"]["units"].items():
+        terms.add(uid)
+        name = params.get("__NAME__", "")
+        if name:
+            terms.add(name)
+            terms.add(f"{uid} {name}")
+
+    terms.update(report["variables"].keys())
+
+    for block_id, entry in report["unit_txt"].items():
+        terms.add(block_id)
+        if entry.get("name"):
+            terms.add(entry["name"])
+
+    return terms
+
 # ============================================================
 # COMPARE
 # ============================================================
