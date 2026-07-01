@@ -1,0 +1,46 @@
+name: Tests
+
+# Esegue la suite di test a ogni push, su ogni pull request
+# e manualmente dalla tab "Actions" (workflow_dispatch).
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test su Windows
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout del codice
+        uses: actions/checkout@v4
+
+      - name: Configura Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/requirements_test.txt
+
+      # requirements.txt e' codificato in UTF-16: lo riscrivo in UTF-8
+      # perche' pip lo legga senza problemi.
+      - name: Converti requirements.txt (UTF-16 -> UTF-8)
+        shell: pwsh
+        run: Get-Content requirements.txt -Encoding Unicode | Set-Content requirements-utf8.txt -Encoding utf8
+
+      - name: Installa le dipendenze
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          # --extra-index-url: wheel CPU precompilate di llama-cpp-python
+          # (evita/velocizza la compilazione da sorgente).
+          pip install -r requirements-utf8.txt --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu
+          pip install -r tests/requirements_test.txt
+
+      # I test AI si skippano da soli se non trovano modelli .gguf
+      # (non versionati), quindi in CI eseguono solo i test non-AI.
+      - name: Esegui i test
+        run: python tests/run_all_tests.py
