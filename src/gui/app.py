@@ -17,7 +17,7 @@ class CompareApp(ctk.CTk):
         super().__init__()
 
         self.minsize(860, 700)
-        self.title("Compare Export Agent v01")
+        self.title("Compare Export Agent v02")
         self.geometry("1120x760")
         self.configure(fg_color=theme.BG)
         self.resizable(True, True)
