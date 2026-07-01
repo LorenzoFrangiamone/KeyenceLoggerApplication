@@ -2,7 +2,7 @@
 @echo off
 set APP_NAME=KCompareAgent
 
-call .\venv\Scripts\activate
+call .\.venv\Scripts\activate
 
 echo Checking llama_cpp...
 python -c "from llama_cpp import Llama; print('llama_cpp OK')"
@@ -24,6 +24,9 @@ python -m PyInstaller ^
   --hidden-import llama_cpp ^
   --name %APP_NAME% ^
   Main.py
+
+echo Copying application source...
+robocopy src dist\%APP_NAME%\src /E /XD __pycache__ >nul
 
 echo Preparing models folder...
 mkdir dist\%APP_NAME%\models

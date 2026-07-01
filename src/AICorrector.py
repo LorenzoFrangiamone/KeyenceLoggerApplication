@@ -4,8 +4,6 @@ import sys
 
 from src.modelSelector import detect_hardware
 
-PROMPT = open("src/promptCorrettore.txt", "r", encoding="utf-8").read()
-
 # src/AICorrector.py -> risalgo alla root del progetto
 if getattr(sys, "frozen", False):
     BASE_DIR = Path(sys.executable).parent
@@ -13,6 +11,7 @@ else:
     BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODELS_DIR = BASE_DIR / "models"
+PROMPT = (BASE_DIR / "src" / "promptCorrettore.txt").read_text(encoding="utf-8")
 
 llm = None
 _current_model_path = None
