@@ -29,6 +29,13 @@ MODEL_CATALOG = [
         "min_ram_gb": 16,
         "min_vram_gb": 6,
     },
+    {
+        "match": "qwen2.5-3b-instruct-fp16-00001-of-00002.gguf",
+        "display_name": "Qwen2.5 3B (medio, GPU consigliata)",
+        "tier": "heavy",
+        "min_ram_gb": 16,
+        "min_vram_gb": 6,
+    },
 ]
 
 _SHARD_RE = re.compile(r"^(?P<base>.+)-(?P<part>\d{5})-of-(?P<total>\d{5})\.gguf$", re.IGNORECASE)

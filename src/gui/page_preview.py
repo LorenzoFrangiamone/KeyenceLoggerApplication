@@ -1,18 +1,20 @@
 import os
-import tkinter as tk
 from tkinter import filedialog, messagebox
+
+import customtkinter as ctk
 
 from src.backEnd import append_change_record, list_autocomplete_terms
 from . import theme
 from .ai_panel import AIPanel
 from .diff_tree import DiffTree
+from .scrollbar import AutoHideScrollbar
 
 PLACEHOLDER_TEXT = "Seleziona Report A e Report B, poi premi Next per generare la preview."
 
 
-class PreviewPage(tk.Frame):
+class PreviewPage(ctk.CTkFrame):
     def __init__(self, parent, preview_fn, compare_fn, generate_fn, get_version, on_back):
-        super().__init__(parent, bg=theme.BG)
+        super().__init__(parent, fg_color=theme.BG, corner_radius=0)
         self.preview_fn = preview_fn
         self.compare_fn = compare_fn
         self.generate_fn = generate_fn
@@ -30,118 +32,135 @@ class PreviewPage(tk.Frame):
         self.diff_tree.show_placeholder(PLACEHOLDER_TEXT)
 
     def _build(self):
-        card = tk.Frame(
+        card = ctk.CTkFrame(
             self,
-            bg=theme.CARD,
-            bd=1,
-            relief="solid",
-            highlightbackground=theme.BORDER,
-            highlightthickness=1
+            fg_color=theme.CARD,
+            corner_radius=theme.RADIUS_CARD,
+            border_width=1,
+            border_color=theme.BORDER
         )
         card.pack(fill="both", expand=True, padx=18, pady=18)
 
         card.grid_rowconfigure(1, weight=1)
         card.grid_columnconfigure(0, weight=1)
-        card.grid_rowconfigure(1, minsize=340)
+        card.grid_rowconfigure(1, minsize=460)
 
-        header = tk.Frame(card, bg=theme.CARD)
+        header = ctk.CTkFrame(card, fg_color="transparent")
         header.grid(row=0, column=0, sticky="ew", padx=20, pady=(18, 12))
 
-        tk.Label(
+        ctk.CTkLabel(
             header,
             text="Preview & Comments",
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.TEXT,
             font=theme.FONT_TITLE
         ).pack(anchor="w")
 
-        tk.Label(
+        ctk.CTkLabel(
             header,
             text="Controlla le differenze e inserisci un commento finale.",
-            bg=theme.CARD,
-            fg=theme.MUTED,
+            text_color=theme.MUTED,
             font=theme.FONT_NORMAL
         ).pack(anchor="w", pady=(4, 0))
 
-        main_container = tk.Frame(card, bg=theme.CARD)
+        main_container = ctk.CTkFrame(card, fg_color="transparent")
         main_container.grid(row=1, column=0, sticky="nsew", padx=20, pady=(0, 12))
 
-        main_container.grid_columnconfigure(0, weight=1, uniform="col")
-        main_container.grid_columnconfigure(1, weight=1, uniform="col")
+        main_container.grid_columnconfigure(0, weight=2, uniform="col")
+        main_container.grid_columnconfigure(1, weight=3, uniform="col")
         main_container.grid_rowconfigure(0, weight=1)
 
         # LEFT COLUMN: DIFF TREE
-        left_frame = tk.Frame(main_container, bg=theme.CARD)
+        left_frame = ctk.CTkFrame(main_container, fg_color="transparent")
         left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
 
         left_frame.grid_rowconfigure(1, weight=1)
         left_frame.grid_columnconfigure(0, weight=1)
 
-        tk.Label(
+        ctk.CTkLabel(
             left_frame,
             text="Preview Differences",
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.TEXT,
             font=theme.FONT_LABEL
         ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        preview_container = tk.Frame(
+        preview_container = ctk.CTkFrame(
             left_frame,
-            bg=theme.BORDER,
-            bd=1,
-            relief="solid"
+            fg_color=theme.CARD,
+            corner_radius=theme.RADIUS_CARD,
+            border_width=1,
+            border_color=theme.BORDER
         )
         preview_container.grid(row=1, column=0, sticky="nsew")
         preview_container.grid_rowconfigure(0, weight=1)
         preview_container.grid_columnconfigure(0, weight=1)
 
         self.diff_tree = DiffTree(preview_container)
-        self.diff_tree.grid(row=0, column=0, sticky="nsew", padx=(1, 0), pady=1)
+        self.diff_tree.grid(row=0, column=0, sticky="nsew", padx=(10, 4), pady=10)
 
-        tree_scroll = tk.Scrollbar(preview_container, orient="vertical", command=self.diff_tree.yview)
-        tree_scroll.grid(row=0, column=1, sticky="ns")
+        tree_scroll = AutoHideScrollbar(
+            preview_container,
+            orientation="vertical",
+            command=self.diff_tree.yview,
+            fg_color="transparent",
+            button_color=theme.BORDER_STRONG,
+            button_hover_color=theme.MUTED,
+            corner_radius=theme.RADIUS_CONTROL,
+            width=12
+        )
+        tree_scroll.grid(row=0, column=1, sticky="ns", padx=(0, 8), pady=10)
         self.diff_tree.configure(yscrollcommand=tree_scroll.set)
 
         # RIGHT COLUMN: COMMENT + AI PANEL
-        right_frame = tk.Frame(main_container, bg=theme.CARD)
+        right_frame = ctk.CTkFrame(main_container, fg_color="transparent")
         right_frame.grid(row=0, column=1, sticky="nsew")
 
         right_frame.grid_columnconfigure(0, weight=1)
         right_frame.grid_rowconfigure(0, weight=1, uniform="right_rows")
         right_frame.grid_rowconfigure(1, weight=1, uniform="right_rows")
 
-        top_right = tk.Frame(right_frame, bg=theme.CARD)
+        top_right = ctk.CTkFrame(right_frame, fg_color="transparent")
         top_right.grid(row=0, column=0, sticky="nsew", pady=(0, 8))
 
         top_right.grid_columnconfigure(0, weight=1)
         top_right.grid_rowconfigure(1, weight=1)
 
-        tk.Label(
+        ctk.CTkLabel(
             top_right,
             text="Comment",
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.TEXT,
             font=theme.FONT_LABEL
         ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        comment_container = tk.Frame(top_right)
+        comment_container = ctk.CTkFrame(top_right, fg_color="transparent")
         comment_container.grid(row=1, column=0, sticky="nsew")
 
-        comment_scroll = tk.Scrollbar(comment_container)
+        comment_scroll = AutoHideScrollbar(
+            comment_container,
+            orientation="vertical",
+            fg_color="transparent",
+            button_color=theme.BORDER_STRONG,
+            button_hover_color=theme.MUTED,
+            corner_radius=theme.RADIUS_CONTROL,
+            width=12
+        )
         comment_scroll.pack(side="right", fill="y")
 
-        self.comment_box = tk.Text(
+        self.comment_box = ctk.CTkTextbox(
             comment_container,
             font=theme.FONT_COMMENT,
-            relief="solid",
-            bd=1,
+            fg_color=theme.FIELD,
+            text_color=theme.TEXT,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
+            corner_radius=theme.RADIUS_CONTROL,
             wrap="word",
+            activate_scrollbars=False,
             yscrollcommand=comment_scroll.set
         )
         self.comment_box.pack(side="left", fill="both", expand=True)
         self.comment_box.bind("<Tab>", self._on_comment_tab)
 
-        comment_scroll.config(command=self.comment_box.yview)
+        comment_scroll.configure(command=self.comment_box.yview)
 
         self.ai_panel = AIPanel(
             right_frame,
@@ -152,43 +171,59 @@ class PreviewPage(tk.Frame):
         self.ai_panel.grid(row=1, column=0, sticky="nsew")
 
         # BUTTONS
-        btn_frame = tk.Frame(card, bg=theme.CARD)
+        btn_frame = ctk.CTkFrame(card, fg_color="transparent")
         btn_frame.grid(row=2, column=0, sticky="ew", padx=20, pady=(0, 18))
+        btn_frame.grid_columnconfigure(0, weight=2, uniform="col")
+        btn_frame.grid_columnconfigure(1, weight=3, uniform="col")
 
-        tk.Button(
+        ctk.CTkButton(
             btn_frame,
             text="<< Back",
             command=self.on_back,
-            width=14,
-            height=2,
-            bg="#e9eef5",
+            width=170,
+            height=58,
+            fg_color=theme.ACCENT2,
+            text_color=theme.TEXT,
+            hover_color=theme.ACCENT2_ACTIVE,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
             font=theme.FONT_BUTTON,
-            relief="flat"
-        ).pack(side="left")
+            corner_radius=theme.RADIUS_CONTROL
+        ).grid(row=0, column=0, sticky="w")
 
-        tk.Button(
-            btn_frame,
-            text="Update Changes_*.csv",
-            command=self.on_update_changes,
-            width=18,
-            height=2,
-            bg=theme.ACCENT2,
-            fg=theme.TEXT,
-            font=theme.FONT_BUTTON,
-            relief="flat"
-        ).pack(side="right", padx=5)
+        # Generate Log + Update Changes fill the whole right column and
+        # split its width in half, dynamically (same pattern as Correct /
+        # Accept Correction in ai_panel.py's controls_row).
+        right_btns = ctk.CTkFrame(btn_frame, fg_color="transparent")
+        right_btns.grid(row=0, column=1, sticky="ew")
+        right_btns.grid_columnconfigure(0, weight=1, uniform="right_btns")
+        right_btns.grid_columnconfigure(1, weight=1, uniform="right_btns")
 
-        tk.Button(
-            btn_frame,
+        ctk.CTkButton(
+            right_btns,
             text="Generate Log",
             command=self.on_generate,
-            width=18,
-            height=2,
-            bg=theme.ACCENT2,
-            fg=theme.TEXT,
+            height=58,
+            fg_color=theme.ACCENT,
+            text_color="white",
+            hover_color=theme.ACCENT_ACTIVE,
             font=theme.FONT_BUTTON,
-            relief="flat"
-        ).pack(side="right", padx=5)
+            corner_radius=theme.RADIUS_CONTROL
+        ).grid(row=0, column=0, sticky="ew", padx=(0, 4))
+
+        ctk.CTkButton(
+            right_btns,
+            text="Update Changes_*.csv",
+            command=self.on_update_changes,
+            height=58,
+            fg_color=theme.ACCENT2,
+            text_color=theme.TEXT,
+            hover_color=theme.ACCENT2_ACTIVE,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
+            font=theme.FONT_BUTTON,
+            corner_radius=theme.RADIUS_CONTROL
+        ).grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
     # ============================================================
     # PREVIEW LOADING

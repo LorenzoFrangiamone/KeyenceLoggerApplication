@@ -21,6 +21,7 @@ python -m PyInstaller ^
   --onedir ^
   --windowed ^
   --collect-all llama_cpp ^
+  --collect-all customtkinter ^
   --hidden-import llama_cpp ^
   --name %APP_NAME% ^
   Main.py

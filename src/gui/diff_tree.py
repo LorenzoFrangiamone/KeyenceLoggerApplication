@@ -15,16 +15,23 @@ class DiffTree(ttk.Treeview):
             "DiffTree.Treeview",
             background=theme.CARD,
             fieldbackground=theme.CARD,
+            foreground=theme.TEXT,
             font=theme.FONT_NORMAL,
-            rowheight=22
+            rowheight=33,
+            borderwidth=0
+        )
+        style.map(
+            "DiffTree.Treeview",
+            background=[("selected", theme.ACCENT)],
+            foreground=[("selected", "#ffffff")]
         )
 
         super().__init__(parent, show="tree", selectmode="browse", style="DiffTree.Treeview")
 
         self.tag_configure("section", font=theme.FONT_LABEL)
-        self.tag_configure("added", foreground="#1a7f37")
-        self.tag_configure("removed", foreground="#cf222e")
-        self.tag_configure("modified", foreground="#9a6700")
+        self.tag_configure("added", foreground=theme.SUCCESS)
+        self.tag_configure("removed", foreground=theme.DANGER)
+        self.tag_configure("modified", foreground=theme.WARNING)
         self.tag_configure("muted", foreground=theme.MUTED)
 
     def show_placeholder(self, text):

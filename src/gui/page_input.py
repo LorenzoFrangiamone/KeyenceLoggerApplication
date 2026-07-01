@@ -2,12 +2,14 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 
+import customtkinter as ctk
+
 from . import theme
 
 
-class InputPage(tk.Frame):
+class InputPage(ctk.CTkFrame):
     def __init__(self, parent, validate_fn, load_paths_fn, save_paths_fn, on_next):
-        super().__init__(parent, bg=theme.BG)
+        super().__init__(parent, fg_color=theme.BG, corner_radius=0)
         self.validate_fn = validate_fn
         self.load_paths_fn = load_paths_fn
         self.save_paths_fn = save_paths_fn
@@ -21,36 +23,33 @@ class InputPage(tk.Frame):
         self._load_saved_paths()
 
     def _build(self):
-        card = tk.Frame(
+        card = ctk.CTkFrame(
             self,
-            bg=theme.CARD,
-            bd=1,
-            relief="solid",
-            highlightbackground=theme.BORDER,
-            highlightthickness=1
+            fg_color=theme.CARD,
+            corner_radius=theme.RADIUS_CARD,
+            border_width=1,
+            border_color=theme.BORDER
         )
         card.pack(fill="both", expand=True, padx=18, pady=18)
 
-        header = tk.Frame(card, bg=theme.CARD)
+        header = ctk.CTkFrame(card, fg_color="transparent")
         header.pack(fill="x", padx=20, pady=(18, 12))
 
-        tk.Label(
+        ctk.CTkLabel(
             header,
             text="Keyence Report Compare Tool",
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.TEXT,
             font=theme.FONT_TITLE
         ).pack(anchor="w")
 
-        tk.Label(
+        ctk.CTkLabel(
             header,
             text="Seleziona due cartelle report e la cartella di output.",
-            bg=theme.CARD,
-            fg=theme.MUTED,
+            text_color=theme.MUTED,
             font=theme.FONT_NORMAL
         ).pack(anchor="w", pady=(4, 0))
 
-        form = tk.Frame(card, bg=theme.CARD)
+        form = ctk.CTkFrame(card, fg_color="transparent")
         form.pack(fill="x", padx=20, pady=10)
 
         self._create_row(form, 0, "Report A", self.report_a_var, self.browse_report_a)
@@ -59,30 +58,31 @@ class InputPage(tk.Frame):
 
         form.columnconfigure(1, weight=1)
 
-        self.status_label = tk.Label(
+        self.status_label = ctk.CTkLabel(
             card,
             text="Seleziona i percorsi richiesti.",
-            bg=theme.CARD,
-            fg=theme.MUTED,
+            text_color=theme.MUTED,
             font=theme.FONT_NORMAL,
             anchor="w"
         )
         self.status_label.pack(fill="x", padx=20, pady=(4, 10))
 
-        action_frame = tk.Frame(card, bg=theme.CARD)
+        action_frame = ctk.CTkFrame(card, fg_color="transparent")
         action_frame.pack(fill="x", padx=20, pady=(0, 20))
 
-        self.next_button = tk.Button(
+        self.next_button = ctk.CTkButton(
             action_frame,
             text="Next >>",
             command=self._handle_next,
             state="disabled",
-            width=14,
-            height=2,
-            bg=theme.ACCENT,
-            fg="white",
+            width=170,
+            height=58,
+            fg_color=theme.ACCENT,
+            text_color="white",
+            text_color_disabled=theme.MUTED,
+            hover_color=theme.ACCENT_ACTIVE,
             font=theme.FONT_BUTTON,
-            relief="flat"
+            corner_radius=theme.RADIUS_CONTROL
         )
         self.next_button.pack(anchor="e")
 
@@ -91,31 +91,40 @@ class InputPage(tk.Frame):
         self.output_var.trace_add("write", lambda *args: self.validate_current_inputs())
 
     def _create_row(self, parent, row_idx, label_text, variable, browse_command):
-        tk.Label(
+        ctk.CTkLabel(
             parent,
             text=label_text,
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.TEXT,
             font=theme.FONT_LABEL
         ).grid(row=row_idx, column=0, sticky="w", pady=8)
 
-        entry = tk.Entry(
+        entry = ctk.CTkEntry(
             parent,
             textvariable=variable,
-            width=78,
-            font=theme.FONT_NORMAL,
-            relief="solid",
-            bd=1
+            width=320,
+            height=46,
+            font=theme.FONT_MONO,
+            fg_color=theme.FIELD,
+            text_color=theme.TEXT,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
+            corner_radius=theme.RADIUS_CONTROL
         )
         entry.grid(row=row_idx, column=1, padx=10, pady=8, sticky="ew")
 
-        tk.Button(
+        ctk.CTkButton(
             parent,
             text="Sfoglia...",
             command=browse_command,
-            width=12,
-            bg="#e9eef5",
-            font=theme.FONT_BUTTON
+            width=130,
+            height=46,
+            fg_color=theme.ACCENT2,
+            text_color=theme.TEXT,
+            hover_color=theme.ACCENT2_ACTIVE,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
+            font=theme.FONT_BUTTON,
+            corner_radius=theme.RADIUS_CONTROL
         ).grid(row=row_idx, column=2, pady=8)
 
     def browse_report_a(self):
@@ -134,7 +143,7 @@ class InputPage(tk.Frame):
             self.output_var.set(folder)
 
     def set_status(self, text, color=None):
-        self.status_label.config(text=text, fg=color or theme.MUTED)
+        self.status_label.configure(text=text, text_color=color or theme.MUTED)
 
     def validate_current_inputs(self):
         report_a = self.report_a_var.get().strip()
@@ -143,16 +152,16 @@ class InputPage(tk.Frame):
 
         if not report_a or not report_b or not output_dir:
             self.set_status("Seleziona Report A, Report B e Output.", theme.MUTED)
-            self.next_button.config(state="disabled")
+            self.next_button.configure(state="disabled")
             return False
 
         ok_a, err_a, warn_a = self.validate_fn(report_a)
         ok_b, err_b, warn_b = self.validate_fn(report_b)
 
         if not os.path.isdir(output_dir):
-            self.set_status("La cartella di output non esiste ancora: verrà creata.", "#996c00")
+            self.set_status("La cartella di output non esiste ancora: verrà creata.", theme.WARNING)
         else:
-            self.set_status("Percorsi selezionati. Premi Next >>", "#2d6a4f")
+            self.set_status("Percorsi selezionati. Premi Next >>", theme.SUCCESS)
 
         if not ok_a or not ok_b:
             msgs = []
@@ -161,11 +170,11 @@ class InputPage(tk.Frame):
             if err_b:
                 msgs.append("Report B: " + "; ".join(err_b))
 
-            self.set_status(" | ".join(msgs), "#b00020")
-            self.next_button.config(state="disabled")
+            self.set_status(" | ".join(msgs), theme.DANGER)
+            self.next_button.configure(state="disabled")
             return False
 
-        self.next_button.config(state="normal")
+        self.next_button.configure(state="normal")
         return True
 
     def get_paths(self):

@@ -1,13 +1,16 @@
 import threading
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox
+
+import customtkinter as ctk
 
 from src.AICorrector import AICorrection, MODELS_DIR, load_model
 from src.modelSelector import detect_hardware, list_available_models, recommend_model
 from . import theme
+from .scrollbar import AutoHideScrollbar
 
 
-class AIPanel(tk.Frame):
+class AIPanel(ctk.CTkFrame):
     """AI correction widget: 'Correct' runs AICorrection in a background
     thread (it's a slow local LLM call) and marshals the result back to
     the Tk mainloop via self.after(); 'Accept' hands the corrected text
@@ -17,7 +20,13 @@ class AIPanel(tk.Frame):
     """
 
     def __init__(self, parent, get_comment, get_preview_markdown, on_accept_text):
-        super().__init__(parent, bg=theme.CARD)
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=theme.RADIUS_CARD,
+            border_width=1,
+            border_color=theme.BORDER
+        )
         self.get_comment = get_comment
         self.get_preview_markdown = get_preview_markdown
         self.on_accept_text = on_accept_text
@@ -27,75 +36,104 @@ class AIPanel(tk.Frame):
 
     def _build(self):
         self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
 
-        header = tk.Frame(self, bg=theme.CARD)
-        header.grid(row=0, column=0, sticky="ew", pady=(0, 6))
-        header.grid_columnconfigure(0, weight=1)
+        header_row = ctk.CTkFrame(self, fg_color="transparent")
+        header_row.grid(row=0, column=0, sticky="ew", padx=12, pady=(12, 10))
+        header_row.grid_columnconfigure(0, weight=1)
 
-        tk.Label(
-            header,
+        ctk.CTkLabel(
+            header_row,
             text="AI Correct & Suggest",
-            bg=theme.CARD,
-            fg=theme.TEXT,
+            text_color=theme.ACCENT_SOFT,
             font=theme.FONT_LABEL
         ).grid(row=0, column=0, sticky="w")
 
-        btns = tk.Frame(header, bg=theme.CARD)
-        btns.grid(row=0, column=1, sticky="e")
-
         self.model_var = tk.StringVar()
-        self.model_combo = ttk.Combobox(
-            btns,
-            textvariable=self.model_var,
+        self.model_combo = ctk.CTkComboBox(
+            header_row,
+            variable=self.model_var,
             state="disabled",
-            width=26,
-            font=theme.FONT_BUTTON
-        )
-        self.model_combo.pack(side="left", padx=(0, 6))
-        self.model_combo.bind("<<ComboboxSelected>>", self.on_model_change)
-
-        self.correct_btn = tk.Button(
-            btns,
-            text="Correct",
-            command=self.on_correct,
-            width=10,
-            bg="#e9eef5",
+            width=260,
+            height=40,
+            fg_color=theme.FIELD,
+            text_color=theme.TEXT,
+            border_color=theme.BORDER_STRONG,
+            button_color=theme.FIELD,
+            button_hover_color=theme.BORDER_STRONG,
+            dropdown_fg_color=theme.FIELD,
+            dropdown_hover_color=theme.ACCENT,
+            dropdown_text_color=theme.TEXT,
             font=theme.FONT_BUTTON,
-            relief="flat",
+            corner_radius=theme.RADIUS_CONTROL,
+            command=self.on_model_change
+        )
+        self.model_combo.grid(row=0, column=1, sticky="e")
+
+        controls_row = ctk.CTkFrame(self, fg_color="transparent")
+        controls_row.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 10))
+        controls_row.grid_columnconfigure(0, weight=1, uniform="btns")
+        controls_row.grid_columnconfigure(1, weight=1, uniform="btns")
+
+        self.correct_btn = ctk.CTkButton(
+            controls_row,
+            text="✦ Correct",
+            command=self.on_correct,
+            height=40,
+            fg_color=theme.ACCENT,
+            text_color="white",
+            text_color_disabled=theme.MUTED,
+            hover_color=theme.ACCENT_ACTIVE,
+            font=theme.FONT_BUTTON,
+            corner_radius=theme.RADIUS_CONTROL,
             state="disabled"
         )
-        self.correct_btn.pack(side="left", padx=(0, 6))
+        self.correct_btn.grid(row=0, column=0, sticky="ew", padx=(0, 4))
 
-        self.accept_btn = tk.Button(
-            btns,
+        self.accept_btn = ctk.CTkButton(
+            controls_row,
             text="Accept Correction",
             command=self.on_accept,
-            width=16,
-            bg=theme.ACCENT2,
-            fg=theme.TEXT,
+            height=40,
+            fg_color=theme.ACCENT2,
+            text_color=theme.TEXT,
+            hover_color=theme.ACCENT2_ACTIVE,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
             font=theme.FONT_BUTTON,
-            relief="flat"
+            corner_radius=theme.RADIUS_CONTROL
         )
-        self.accept_btn.pack(side="left")
+        self.accept_btn.grid(row=0, column=1, sticky="ew", padx=(4, 0))
 
-        notes_container = tk.Frame(self)
-        notes_container.grid(row=1, column=0, sticky="nsew")
+        notes_container = ctk.CTkFrame(self, fg_color="transparent")
+        notes_container.grid(row=2, column=0, sticky="nsew", padx=12, pady=(0, 12))
 
-        notes_scroll = tk.Scrollbar(notes_container)
+        notes_scroll = AutoHideScrollbar(
+            notes_container,
+            orientation="vertical",
+            fg_color="transparent",
+            button_color=theme.BORDER_STRONG,
+            button_hover_color=theme.MUTED,
+            corner_radius=theme.RADIUS_CONTROL,
+            width=12
+        )
         notes_scroll.pack(side="right", fill="y")
 
-        self.notes_box = tk.Text(
+        self.notes_box = ctk.CTkTextbox(
             notes_container,
             font=theme.FONT_COMMENT,
-            relief="solid",
-            bd=1,
+            fg_color=theme.FIELD,
+            text_color=theme.TEXT,
+            border_color=theme.BORDER_STRONG,
+            border_width=1,
+            corner_radius=theme.RADIUS_CONTROL,
             wrap="word",
+            activate_scrollbars=False,
             yscrollcommand=notes_scroll.set
         )
         self.notes_box.pack(side="left", fill="both", expand=True)
 
-        notes_scroll.config(command=self.notes_box.yview)
+        notes_scroll.configure(command=self.notes_box.yview)
 
     # ============================================================
     # SELEZIONE MODELLO
@@ -108,7 +146,7 @@ class AIPanel(tk.Frame):
             return
 
         if not models:
-            self.notes_box.config(state="normal")
+            self.notes_box.configure(state="normal")
             self.notes_box.delete("1.0", "end")
             self.notes_box.insert(
                 "1.0",
@@ -119,7 +157,7 @@ class AIPanel(tk.Frame):
 
         self._model_paths = {m["display_name"]: m["path"] for m in models}
         display_names = list(self._model_paths.keys())
-        self.model_combo.config(values=display_names)
+        self.model_combo.configure(values=display_names)
 
         recommended = recommend_model(models, detect_hardware())
         default_name = recommended["display_name"] if recommended else display_names[0]
@@ -127,32 +165,33 @@ class AIPanel(tk.Frame):
 
         self._load_model_in_background(self._model_paths[default_name])
 
-    def on_model_change(self, event=None):
-        display_name = self.model_var.get()
+    def on_model_change(self, choice=None):
+        display_name = choice if choice is not None else self.model_var.get()
         path = self._model_paths.get(display_name)
         if path:
             self._load_model_in_background(path)
 
     def _load_model_in_background(self, model_path):
-        self.model_combo.config(state="disabled")
-        self.correct_btn.config(state="disabled")
+        self.model_combo.configure(state="disabled")
+        self.correct_btn.configure(state="disabled")
 
         def worker():
             try:
                 load_model(model_path)
             except Exception as e:
-                self.after(0, lambda: self._on_model_load_error(e))
+                error_message = str(e)
+                self.after(0, lambda: self._on_model_load_error(error_message))
                 return
             self.after(0, self._on_model_load_success)
 
         threading.Thread(target=worker, daemon=True).start()
 
     def _on_model_load_success(self):
-        self.model_combo.config(state="readonly")
-        self.correct_btn.config(state="normal")
+        self.model_combo.configure(state="readonly")
+        self.correct_btn.configure(state="normal")
 
     def _on_model_load_error(self, error):
-        self.model_combo.config(state="readonly")
+        self.model_combo.configure(state="readonly")
         messagebox.showerror("Errore caricamento modello", str(error))
 
     def on_correct(self):
@@ -166,9 +205,9 @@ class AIPanel(tk.Frame):
             )
             return
 
-        self.correct_btn.config(state="disabled")
-        self.model_combo.config(state="disabled")
-        self.notes_box.config(state="normal")
+        self.correct_btn.configure(state="disabled")
+        self.model_combo.configure(state="disabled")
+        self.notes_box.configure(state="normal")
         self.notes_box.delete("1.0", "end")
         self.notes_box.insert("1.0", "thinking ...")
         self.notes_box.update_idletasks()
@@ -177,7 +216,8 @@ class AIPanel(tk.Frame):
             try:
                 result = AICorrection(auto, human)
             except Exception as e:
-                self.after(0, lambda: self._on_error(e))
+                error_message = str(e)
+                self.after(0, lambda: self._on_error(error_message))
                 return
 
             result = "" if result is None else str(result)
@@ -186,18 +226,18 @@ class AIPanel(tk.Frame):
         threading.Thread(target=worker, daemon=True).start()
 
     def _on_success(self, result):
-        self.notes_box.config(state="normal")
+        self.notes_box.configure(state="normal")
         self.notes_box.delete("1.0", "end")
         self.notes_box.insert("1.0", result)
-        self.correct_btn.config(state="normal")
-        self.model_combo.config(state="readonly")
+        self.correct_btn.configure(state="normal")
+        self.model_combo.configure(state="readonly")
 
     def _on_error(self, error):
-        self.notes_box.config(state="normal")
+        self.notes_box.configure(state="normal")
         self.notes_box.delete("1.0", "end")
         self.notes_box.insert("1.0", f"Errore durante la correzione AI:\n{error}")
-        self.correct_btn.config(state="normal")
-        self.model_combo.config(state="readonly")
+        self.correct_btn.configure(state="normal")
+        self.model_combo.configure(state="readonly")
 
     def on_accept(self):
         """Copia nel callback solo la parte del testo AI che precede il
