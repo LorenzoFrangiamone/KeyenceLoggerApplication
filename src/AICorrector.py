@@ -31,8 +31,12 @@ def load_model(model_path):
     hardware = detect_hardware()
     use_gpu = bool(hardware.get("vram_gb"))
 
+    if llm is not None:
+        llm.close()
+        llm = None
+
     if use_gpu:
-        new_llm = Llama(
+        llm = Llama(
             model_path=model_path,
             n_ctx=4096,
             n_threads=hardware.get("cpu_cores") or 8,
@@ -41,14 +45,13 @@ def load_model(model_path):
             verbose=True
         )
     else:
-        new_llm = Llama(
+        llm = Llama(
             model_path=model_path,
             n_ctx=32768,
             n_threads=hardware.get("cpu_cores") or 8,
             verbose=False
         )
 
-    llm = new_llm
     _current_model_path = model_path
     return _current_model_path
 
